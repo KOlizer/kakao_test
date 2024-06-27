@@ -1,7 +1,6 @@
 // src/pages/MainPage.tsx
 import React, { useState } from 'react';
 import InputBox from '../components/InputBox';
-import ApiButton from '../components/ApiButton';
 import ScriptDisplay from '../components/ScriptDisplay';
 import CopyButton from '../components/CopyButton';
 import styled from 'styled-components';
@@ -16,13 +15,41 @@ const Container = styled.div`
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     z-index: 10;
     overflow: auto;
-    max-height: 92vh;
+    max-height: 90vh;
 `;
 
 const Title = styled.h1`
     text-align: center;
     margin-bottom: 1.5em;
     color: #fff;
+`;
+
+const ButtonContainer = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2em;
+`;
+
+const StyledButton = styled.button`
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 0.75em 1.5em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.001s ease-in;
+    margin: 0 1em;
+
+    &:hover {
+        background-color: #218838;
+    }
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 8px rgba(33, 136, 56, 0.6);
+    }
 `;
 
 const MainPage: React.FC = () => {
@@ -124,9 +151,13 @@ sudo -E ./script.sh`;
             <InputBox label="Standby의 엔드포인트" placeholder="직접 입력" value={standbyEndpoint} onChange={(e) => setStandbyEndpoint(e.target.value)} />
             <InputBox label="Docker Image 이름" placeholder="직접 입력" value={dockerImageName} onChange={(e) => setDockerImageName(e.target.value)} />
             <InputBox label="Docker Image Base Java Version" placeholder="직접 입력" value={dockerJavaVersion} onChange={(e) => setDockerJavaVersion(e.target.value)} />
-            <button onClick={generateScript}>스크립트 생성</button>
+
+            <ButtonContainer>
+                <StyledButton onClick={generateScript}>스크립트 생성</StyledButton>
+                <CopyButton script={script} />
+            </ButtonContainer>
+
             <ScriptDisplay script={script} />
-            <CopyButton script={script} />
         </Container>
     );
 };

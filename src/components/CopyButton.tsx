@@ -13,9 +13,9 @@ const Button = styled.button`
     padding: 0.75em 1.5em;
     border-radius: 4px;
     cursor: pointer;
-    margin-top: 1em;
     font-size: 1em;
-    transition: all 0.3s ease;
+    transition: all 0.001s ease-in;
+    margin: 0 1em;
 
     &:hover {
         background-color: #0056b3;
