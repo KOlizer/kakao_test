@@ -1,7 +1,7 @@
 // src/components/InputBox.tsx
 import React from 'react';
 import styled from 'styled-components';
-import ApiButton from "components/ApiButton";
+import ApiButton from './ApiButton';
 
 interface InputBoxProps {
     label: string;
@@ -9,6 +9,8 @@ interface InputBoxProps {
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     height?: string;
+    showApiButton?: boolean;
+    onApiClick?: (() => void);
 }
 
 const Container = styled.div`
@@ -17,7 +19,7 @@ const Container = styled.div`
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    align-items: inherit; // Button 요소를 우상단에 정렬
+    align-items: inherit;
     position: relative;
 `;
 
@@ -51,12 +53,12 @@ const Input = styled.input<{ height?: string }>`
     }
 `;
 
-const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height }) => {
+const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick }) => {
     return (
         <Container>
             <LabelContainer>
                 <Label>{label}</Label>
-                <ApiButton label="API로 조회" onClick={() => {/* API 호출 로직 추가 */}} />
+                {showApiButton && onApiClick && <ApiButton label="API로 조회" onClick={onApiClick} />}
             </LabelContainer>
             <Input type="text" placeholder={placeholder} value={value} onChange={onChange} height={height} />
         </Container>
