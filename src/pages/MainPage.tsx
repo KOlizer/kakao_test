@@ -139,7 +139,7 @@ sudo -E ./script.sh`;
                     onChange={(e) => setProjectName(e.target.value)}
                     showApiButton
                     onApiClick={() => handleApiClick('API_ENDPOINT_FOR_PROJECT_NAME', setProjectName)} // 실제 API 엔드포인트로 대체
-                    onConsoleClick={() => handleConsoleClick('https://github.com/your-repo/your-project')} // GitHub 링크로 대체
+                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')} // GitHub 링크로 대체
                 />
             </GroupContainer>
             <GroupContainer>
@@ -151,7 +151,7 @@ sudo -E ./script.sh`;
                     height="100px"
                     showApiButton
                     onApiClick={() => handleApiClick('API_ENDPOINT_FOR_CLUSTER_LIST', setClusterList)} // 실제 API 엔드포인트로 대체
-                    onConsoleClick={() => handleConsoleClick('https://github.com/your-repo/your-project')} // GitHub 링크로 대체
+                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')} // GitHub 링크로 대체
                 />
                 <InputBox label="클러스터 이름" placeholder="직접 입력" value={clusterName} onChange={(e) => setClusterName(e.target.value)} />
                 <InputBox label="클러스터의 API 엔드포인트" placeholder="직접 입력" value={apiEndpoint} onChange={(e) => setApiEndpoint(e.target.value)} />
@@ -166,7 +166,7 @@ sudo -E ./script.sh`;
                     height="100px"
                     showApiButton
                     onApiClick={() => handleApiClick('API_ENDPOINT_FOR_INSTANCE_LIST', setInstanceList)} // 실제 API 엔드포인트로 대체
-                    onConsoleClick={() => handleConsoleClick('https://github.com/your-repo/your-project')} // GitHub 링크로 대체
+                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')} // GitHub 링크로 대체
                 />
                 <InputBox label="Primary의 엔드포인트" placeholder="직접 입력" value={primaryEndpoint} onChange={(e) => setPrimaryEndpoint(e.target.value)} />
                 <InputBox label="Standby의 엔드포인트" placeholder="직접 입력" value={standbyEndpoint} onChange={(e) => setStandbyEndpoint(e.target.value)} />
