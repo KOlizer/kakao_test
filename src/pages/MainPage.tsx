@@ -8,20 +8,26 @@ import axios from 'axios';
 
 const Container = styled.div`
     max-width: 800px;
-    margin: 2em auto;
+    margin: 1.5em auto;
     padding: 2em;
     background-color: rgba(0, 0, 0, 0.5);
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     z-index: 10;
-    overflow: auto;
-    max-height: 90vh;
+    min-height: 100vh; // 컨테이너 높이를 최소 100vh로 설정
 `;
 
 const Title = styled.h1`
     text-align: center;
     margin-bottom: 1.5em;
     color: #fff;
+`;
+
+const GroupContainer = styled.div`
+    margin-bottom: 2em;
+    padding: 1em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
 `;
 
 const ButtonContainer = styled.div`
@@ -39,7 +45,7 @@ const StyledButton = styled.button`
     border-radius: 4px;
     cursor: pointer;
     font-size: 1em;
-    transition: all 0.001s ease-in;
+    transition: background-color 0.1s ease-in; 
     margin: 0 1em;
 
     &:hover {
@@ -115,48 +121,56 @@ sudo -E ./script.sh`;
     return (
         <Container>
             <Title>Bastion VM 스크립트 생성</Title>
-            <InputBox label="사용자 액세스 키" placeholder="직접 입력" value={accessKey} onChange={(e) => setAccessKey(e.target.value)} />
-            <InputBox label="사용자 액세스 보안 키" placeholder="직접 입력" value={secretKey} onChange={(e) => setSecretKey(e.target.value)} />
-            <InputBox label="사용자 이메일" placeholder="직접 입력" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <InputBox
-                label="프로젝트 이름"
-                placeholder="직접 입력"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                showApiButton
-                onApiClick={() => handleApiClick('API_ENDPOINT_FOR_PROJECT_NAME', setProjectName)} // 실제 API 엔드포인트로 대체
-            />
-            <InputBox
-                label="클러스터 리스트"
-                placeholder="직접 입력"
-                value={clusterList}
-                onChange={(e) => setClusterList(e.target.value)}
-                height="100px"
-                showApiButton
-                onApiClick={() => handleApiClick('API_ENDPOINT_FOR_CLUSTER_LIST', setClusterList)} // 실제 API 엔드포인트로 대체
-            />
-            <InputBox label="클러스터 이름" placeholder="직접 입력" value={clusterName} onChange={(e) => setClusterName(e.target.value)} />
-            <InputBox label="클러스터의 API 엔드포인트" placeholder="직접 입력" value={apiEndpoint} onChange={(e) => setApiEndpoint(e.target.value)} />
-            <InputBox label="클러스터의 certificate-authority-data" placeholder="직접 입력" value={authData} onChange={(e) => setAuthData(e.target.value)} />
-            <InputBox
-                label="인스턴스 리스트"
-                placeholder="직접 입력"
-                value={instanceList}
-                onChange={(e) => setInstanceList(e.target.value)}
-                height="100px"
-                showApiButton
-                onApiClick={() => handleApiClick('API_ENDPOINT_FOR_INSTANCE_LIST', setInstanceList)} // 실제 API 엔드포인트로 대체
-            />
-            <InputBox label="Primary의 엔드포인트" placeholder="직접 입력" value={primaryEndpoint} onChange={(e) => setPrimaryEndpoint(e.target.value)} />
-            <InputBox label="Standby의 엔드포인트" placeholder="직접 입력" value={standbyEndpoint} onChange={(e) => setStandbyEndpoint(e.target.value)} />
-            <InputBox label="Docker Image 이름" placeholder="직접 입력" value={dockerImageName} onChange={(e) => setDockerImageName(e.target.value)} />
-            <InputBox label="Docker Image Base Java Version" placeholder="직접 입력" value={dockerJavaVersion} onChange={(e) => setDockerJavaVersion(e.target.value)} />
-
+            <GroupContainer>
+                <InputBox label="사용자 액세스 키" placeholder="직접 입력" value={accessKey} onChange={(e) => setAccessKey(e.target.value)} />
+                <InputBox label="사용자 액세스 보안 키" placeholder="직접 입력" value={secretKey} onChange={(e) => setSecretKey(e.target.value)} />
+                <InputBox label="사용자 이메일" placeholder="직접 입력" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </GroupContainer>
+            <GroupContainer>
+                <InputBox
+                    label="프로젝트 이름"
+                    placeholder="직접 입력"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    showApiButton
+                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_PROJECT_NAME', setProjectName)} // 실제 API 엔드포인트로 대체
+                />
+            </GroupContainer>
+            <GroupContainer>
+                <InputBox
+                    label="클러스터 리스트"
+                    placeholder="직접 입력"
+                    value={clusterList}
+                    onChange={(e) => setClusterList(e.target.value)}
+                    height="100px"
+                    showApiButton
+                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_CLUSTER_LIST', setClusterList)} // 실제 API 엔드포인트로 대체
+                />
+                <InputBox label="클러스터 이름" placeholder="직접 입력" value={clusterName} onChange={(e) => setClusterName(e.target.value)} />
+                <InputBox label="클러스터의 API 엔드포인트" placeholder="직접 입력" value={apiEndpoint} onChange={(e) => setApiEndpoint(e.target.value)} />
+                <InputBox label="클러스터의 certificate-authority-data" placeholder="직접 입력" value={authData} onChange={(e) => setAuthData(e.target.value)} />
+            </GroupContainer>
+            <GroupContainer>
+                <InputBox
+                    label="인스턴스 리스트"
+                    placeholder="직접 입력"
+                    value={instanceList}
+                    onChange={(e) => setInstanceList(e.target.value)}
+                    height="100px"
+                    showApiButton
+                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_INSTANCE_LIST', setInstanceList)} // 실제 API 엔드포인트로 대체
+                />
+                <InputBox label="Primary의 엔드포인트" placeholder="직접 입력" value={primaryEndpoint} onChange={(e) => setPrimaryEndpoint(e.target.value)} />
+                <InputBox label="Standby의 엔드포인트" placeholder="직접 입력" value={standbyEndpoint} onChange={(e) => setStandbyEndpoint(e.target.value)} />
+            </GroupContainer>
+            <GroupContainer>
+                <InputBox label="Docker Image 이름" placeholder="직접 입력" value={dockerImageName} onChange={(e) => setDockerImageName(e.target.value)} />
+                <InputBox label="Docker Image Base Java Version" placeholder="직접 입력" value={dockerJavaVersion} onChange={(e) => setDockerJavaVersion(e.target.value)} />
+            </GroupContainer>
             <ButtonContainer>
                 <StyledButton onClick={generateScript}>스크립트 생성</StyledButton>
                 <CopyButton script={script} />
             </ButtonContainer>
-
             <ScriptDisplay script={script} />
         </Container>
     );

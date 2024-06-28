@@ -10,7 +10,9 @@ const GlobalStyle = createGlobalStyle`
         background: linear-gradient(145deg, #5d7404, #0d0956);
         color: white;
         height: 100vh;
-        overflow: hidden;
+        overflow: auto;
+        background-attachment: fixed; // 이 줄을 추가하여 배경이 고정되지 않도록 설정
+        background-size: cover; // 배경 이미지가 전체를 덮도록 설정
     }
 
     * {
