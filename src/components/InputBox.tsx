@@ -13,10 +13,11 @@ interface InputBoxProps {
     showApiButton?: boolean;
     onApiClick?: (() => void);
     onConsoleClick?: (() => void); // 콘솔로 조회 버튼 클릭 핸들러
+    isLoading?: boolean; // 추가된 속성
 }
 
 const Container = styled.div`
-    margin-bottom: 2.5em;
+    margin-bottom: 2.1em;
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -60,7 +61,7 @@ const ButtonContainer = styled.div`
     gap: 0.5em;
 `;
 
-const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick, onConsoleClick }) => {
+const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick, onConsoleClick, isLoading }) => {
     return (
         <Container>
             <LabelContainer>
@@ -68,7 +69,7 @@ const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange
                 {showApiButton && (
                     <ButtonContainer>
                         {onConsoleClick && <SharedButton onClick={onConsoleClick}>콘솔로 조회</SharedButton>}
-                        {onApiClick && <ApiButton label="API로 조회" onClick={onApiClick} />}
+                        {onApiClick && <ApiButton label="API로 조회" onClick={onApiClick} isLoading={isLoading || false} />}
                     </ButtonContainer>
                 )}
             </LabelContainer>

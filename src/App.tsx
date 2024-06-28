@@ -5,7 +5,7 @@ import GlobalStyle from './styles/GlobalStyle';
 
 const App: React.FC = () => {
     return (
-        <div className="App">
+        <div className="App" style={{ padding:'1px' }} >
             <GlobalStyle />
             <MainPage />
         </div>

@@ -14,7 +14,7 @@ const Container = styled.div`
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     z-index: 10;
-    min-height: 100vh; // 컨테이너 높이를 최소 100vh로 설정
+    min-height: 100vh;
 `;
 
 const Title = styled.h1`
@@ -24,8 +24,10 @@ const Title = styled.h1`
 `;
 
 const GroupContainer = styled.div`
-    margin-bottom: 2em;
+    margin-bottom: 1.5em;
     padding: 1em;
+    padding-top: 2em;
+    padding-bottom: 0.01em;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
 `;
@@ -73,6 +75,7 @@ const MainPage: React.FC = () => {
     const [dockerImageName, setDockerImageName] = useState('demo-spring-boot');
     const [dockerJavaVersion, setDockerJavaVersion] = useState('17-jdk-slim');
     const [script, setScript] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const generateScript = () => {
         const newScript = `#!/bin/bash
@@ -108,17 +111,21 @@ sudo -E ./script.sh`;
         setScript(newScript);
     };
 
-    // API 조회 함수
+    const sleep = (ms: number) => {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    };
+
     const handleApiClick = async (url: string, setter: (data: string) => void) => {
+        setLoading(true);
         try {
             const response = await axios.get(url);
             setter(response.data);
         } catch (error) {
             console.error('API 호출 오류:', error);
         }
+        setLoading(false);
     };
 
-    // 콘솔로 조회 버튼 핸들러
     const handleConsoleClick = (url: string) => {
         window.open(url, '_blank');
     };
@@ -138,8 +145,9 @@ sudo -E ./script.sh`;
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     showApiButton
-                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_PROJECT_NAME', setProjectName)} // 실제 API 엔드포인트로 대체
-                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')} // GitHub 링크로 대체
+                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_PROJECT_NAME', setProjectName)}
+                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')}
+                    isLoading={loading} // 로딩 상태 전달
                 />
             </GroupContainer>
             <GroupContainer>
@@ -150,8 +158,9 @@ sudo -E ./script.sh`;
                     onChange={(e) => setClusterList(e.target.value)}
                     height="100px"
                     showApiButton
-                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_CLUSTER_LIST', setClusterList)} // 실제 API 엔드포인트로 대체
-                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')} // GitHub 링크로 대체
+                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_CLUSTER_LIST', setClusterList)}
+                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')}
+                    isLoading={loading} // 로딩 상태 전달
                 />
                 <InputBox label="클러스터 이름" placeholder="직접 입력" value={clusterName} onChange={(e) => setClusterName(e.target.value)} />
                 <InputBox label="클러스터의 API 엔드포인트" placeholder="직접 입력" value={apiEndpoint} onChange={(e) => setApiEndpoint(e.target.value)} />
@@ -159,14 +168,15 @@ sudo -E ./script.sh`;
             </GroupContainer>
             <GroupContainer>
                 <InputBox
-                    label="인스턴스 리스트"
+                    label="인스턴스 그룹 리스트"
                     placeholder="직접 입력"
                     value={instanceList}
                     onChange={(e) => setInstanceList(e.target.value)}
                     height="100px"
                     showApiButton
-                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_INSTANCE_LIST', setInstanceList)} // 실제 API 엔드포인트로 대체
-                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')} // GitHub 링크로 대체
+                    onApiClick={() => handleApiClick('API_ENDPOINT_FOR_INSTANCE_LIST', setInstanceList)}
+                    onConsoleClick={() => handleConsoleClick('https://github.com/kakaocloud-edu/tutorial/blob/main/AdvancedCourse/PracticalTextbook/Lab03.md#1-bastion-vm-%EC%9D%B8%EC%8A%A4%ED%84%B4%EC%8A%A4-%EC%83%9D%EC%84%B1')}
+                    isLoading={loading} // 로딩 상태 전달
                 />
                 <InputBox label="Primary의 엔드포인트" placeholder="직접 입력" value={primaryEndpoint} onChange={(e) => setPrimaryEndpoint(e.target.value)} />
                 <InputBox label="Standby의 엔드포인트" placeholder="직접 입력" value={standbyEndpoint} onChange={(e) => setStandbyEndpoint(e.target.value)} />
