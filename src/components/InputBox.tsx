@@ -2,6 +2,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import ApiButton from './ApiButton';
+import { SharedButton } from './ButtonStyles';
 
 interface InputBoxProps {
     label: string;
@@ -11,6 +12,7 @@ interface InputBoxProps {
     height?: string;
     showApiButton?: boolean;
     onApiClick?: (() => void);
+    onConsoleClick?: (() => void); // 콘솔로 조회 버튼 클릭 핸들러
 }
 
 const Container = styled.div`
@@ -53,12 +55,22 @@ const Input = styled.input<{ height?: string }>`
     }
 `;
 
-const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick }) => {
+const ButtonContainer = styled.div`
+    display: flex;
+    gap: 0.5em;
+`;
+
+const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick, onConsoleClick }) => {
     return (
         <Container>
             <LabelContainer>
                 <Label>{label}</Label>
-                {showApiButton && onApiClick && <ApiButton label="API로 조회" onClick={onApiClick} />}
+                {showApiButton && (
+                    <ButtonContainer>
+                        {onConsoleClick && <SharedButton onClick={onConsoleClick}>콘솔로 조회</SharedButton>}
+                        {onApiClick && <ApiButton label="API로 조회" onClick={onApiClick} />}
+                    </ButtonContainer>
+                )}
             </LabelContainer>
             <Input type="text" placeholder={placeholder} value={value} onChange={onChange} height={height} />
         </Container>
