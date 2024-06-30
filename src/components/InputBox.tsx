@@ -14,6 +14,8 @@ interface InputBoxProps {
     onApiClick?: (() => void);
     onConsoleClick?: (() => void); // 콘솔로 조회 버튼 클릭 핸들러
     isLoading?: boolean; // 추가된 속성
+    readOnly?: boolean; // readOnly prop 추가
+    disableAll?: boolean; // 다른 버튼 비활성화
 }
 
 const Container = styled.div`
@@ -61,19 +63,19 @@ const ButtonContainer = styled.div`
     gap: 0.5em;
 `;
 
-const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick, onConsoleClick, isLoading }) => {
+const InputBox: React.FC<InputBoxProps> = ({ label, placeholder, value, onChange, height, showApiButton, onApiClick, onConsoleClick, isLoading, readOnly, disableAll}) => {
     return (
         <Container>
             <LabelContainer>
                 <Label>{label}</Label>
                 {showApiButton && (
                     <ButtonContainer>
-                        {onConsoleClick && <SharedButton onClick={onConsoleClick}>콘솔로 조회</SharedButton>}
-                        {onApiClick && <ApiButton label="API로 조회" onClick={onApiClick} isLoading={isLoading || false} />}
+                        {onConsoleClick && <SharedButton onClick={onConsoleClick}> disabled={disableAll} 콘솔로 조회</SharedButton>}
+                        {onApiClick && <ApiButton id = {label} label="API로 조회" onClick={onApiClick} isLoading={isLoading || false } disabled={disableAll} />}
                     </ButtonContainer>
                 )}
             </LabelContainer>
-            <Input type="text" placeholder={placeholder} value={value} onChange={onChange} height={height} />
+            <Input type="text" placeholder={placeholder} value={value} onChange={onChange} height={height} readOnly={readOnly} />
         </Container>
     );
 };

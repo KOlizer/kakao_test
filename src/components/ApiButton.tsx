@@ -4,9 +4,11 @@ import { SharedButton } from './ButtonStyles';
 import styled from 'styled-components';
 
 interface ApiButtonProps {
+    id: string;
     label: string;
-    onClick: () => void;
+    onClick: (id: string) => void;
     isLoading: boolean;
+    disabled?: boolean; // 추가된 부분
 }
 
 const Loader = styled.div`
@@ -23,9 +25,13 @@ const Loader = styled.div`
     }
 `;
 
-const ApiButton: React.FC<ApiButtonProps> = ({ label, onClick, isLoading }) => {
+const ApiButton: React.FC<ApiButtonProps> = ({ id, label, onClick, isLoading, disabled = false }) => {
+    const handleClick = () => {
+        onClick(id);
+    };
+
     return (
-        <SharedButton onClick={onClick} disabled={isLoading}>
+        <SharedButton onClick={handleClick} disabled={isLoading || disabled}>
             {isLoading ? <Loader /> : label}
         </SharedButton>
     );
