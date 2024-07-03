@@ -178,7 +178,7 @@ sudo -E ./script.sh`;
     const fetchProjects = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('http://61.109.237.248:8000/get-project-name', {
+            const response = await axios.post('http://210.109.53.21:8000/get-project-name', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
             });
@@ -193,10 +193,11 @@ sudo -E ./script.sh`;
     const fetchClusters = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('http://61.109.237.248:8000/get-clusters', {
+            const response = await axios.post('http://210.109.53.21.248:8000/get-clusters', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
             });
+
 
             const clusterNames = response.data.items.map((item: any) => item.name);
 
@@ -211,7 +212,7 @@ sudo -E ./script.sh`;
     const fetchInstanceLists = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('http://61.109.237.248:8000/get-instance-groups', {
+            const response = await axios.post('http://210.109.53.21:8000/get-instance-groups', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
             });
@@ -227,7 +228,7 @@ sudo -E ./script.sh`;
     const fetchInstanceEndpoints = async (selectedInstanceName?: string) => {
         setLoading(true);
         try {
-            const response = await axios.post('http://61.109.237.248:8000/get-instance-endpoints', {
+            const response = await axios.post('http://210.109.53.21:8000/get-instance-endpoints', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
                 instance_set_name: selectedInstanceName  // instance_set_name 추가
@@ -249,7 +250,7 @@ sudo -E ./script.sh`;
     const fetchKubeConfig = async (selectedClusterName?: string) => {
         setLoading(true);
         try {
-            const response = await axios.post<KubeConfig>('http://61.109.237.248:8000/get-kubeconfig', {
+            const response = await axios.post<KubeConfig>('http://210.109.53.21:8000/get-kubeconfig', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
                 cluster_name: selectedClusterName  // cluster_name 추가
