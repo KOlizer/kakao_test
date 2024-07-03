@@ -161,11 +161,12 @@ const MainPage: React.FC = () => {
             newErrors.secretKey = '비밀 액세스 키는 소문자와 숫자로만 구성되어야 합니다.';
         }
 
-        // 이메일 유효성 검사
+        /* 이메일 유효성 검사
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             isValid = false;
             newErrors.email = '유효한 이메일 형식이 아닙니다.';
         }
+        */
 
         // 클러스터 이름 유효성 검사
         if (!/^[a-z]/.test(clusterName)) {
@@ -269,7 +270,7 @@ const MainPage: React.FC = () => {
         return isValid;
     };
 
-    const generateScript = () => {
+    const generateScript = async() => {
         if (validateForm()) {
             const newScript = `#!/bin/bash
 echo "kakaocloud: 1.Starting environment variable setup"
@@ -301,8 +302,27 @@ wget https://github.com/kakaocloud-edu/tutorial/raw/main/AdvancedCourse/src/scri
 chmod +x script.sh
 sudo -E ./script.sh`;
             setScript(newScript);
-            navigator.clipboard.writeText(newScript);
-            alert('스크립트가 생성되고 클립보드에 복사되었습니다.');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(newScript);
+                    alert('스크립트가 생성되고 클립보드에 복사되었습니다.');
+                } else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = newScript;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        alert('스크립트가 생성되고 클립보드에 복사되었습니다.');
+                    } catch (err) {
+                        console.error('클립보드에 복사하는 동안 오류가 발생했습니다:', err);
+                    }
+                    document.body.removeChild(textArea);
+                }
+            } catch (err) {
+                console.error('클립보드에 복사하는 동안 오류가 발생했습니다:', err);
+            }
         } else {
             alert('각 필드의 유효성을 체크해주세요.');
         }
@@ -311,7 +331,7 @@ sudo -E ./script.sh`;
     const fetchProjects = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('61.109.236.156.248:8000/get-project-name', {
+            const response = await axios.post('http://61.109.236.156:8000/get-project-name', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
             });
@@ -326,7 +346,7 @@ sudo -E ./script.sh`;
     const fetchClusters = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('61.109.236.156:8000/get-clusters', {
+            const response = await axios.post('http://61.109.236.156:8000/get-clusters', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
             });
@@ -344,7 +364,7 @@ sudo -E ./script.sh`;
     const fetchInstanceLists = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('61.109.236.156:8000/get-instance-groups', {
+            const response = await axios.post('http://61.109.236.156:8000/get-instance-groups', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
             });
@@ -360,7 +380,7 @@ sudo -E ./script.sh`;
     const fetchInstanceEndpoints = async (selectedInstanceName?: string) => {
         setLoading(true);
         try {
-            const response = await axios.post('61.109.236.156:8000/get-instance-endpoints', {
+            const response = await axios.post('http://61.109.236.156:8000/get-instance-endpoints', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
                 instance_set_name: selectedInstanceName  // instance_set_name 추가
@@ -382,7 +402,7 @@ sudo -E ./script.sh`;
     const fetchKubeConfig = async (selectedClusterName?: string) => {
         setLoading(true);
         try {
-            const response = await axios.post<KubeConfig>('61.109.236.156:8000/get-kubeconfig', {
+            const response = await axios.post<KubeConfig>('http://61.109.236.156:8000/get-kubeconfig', {
                 access_key_id: accessKey,
                 access_key_secret: secretKey,
                 cluster_name: selectedClusterName  // cluster_name 추가
