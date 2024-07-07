@@ -21,28 +21,48 @@ sudo curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl || { echo "kakaocloud: Failed to install kubectl binary"; exit 1; }
 echo "kakaocloud: Kubectl installed"
 
+# kic-iam-auth 설치
+echo "kakaocloud: 3. Installing kic-iam-auth"
+sudo wget -O /usr/local/bin/kic-iam-auth https://objectstorage.kr-central-2.kakaoi.io/v1/fe631cd1b7a14c0ba2612d031a8a5619/public/docs%2Fbinaries-kic-iam-auth%2FLinux%20x86_64%2064Bit%2Fkic-iam-auth || { echo "kakaocloud: Failed to download kic-iam-auth"; exit 1; }
+sudo chmod +x /usr/local/bin/kic-iam-auth || { echo "kakaocloud: Failed to change permission of kic-iam-auth"; exit 1; }
+echo "kakaocloud: kic-iam-auth installation completed"
+
 # kubeconfig 설정
-echo "kakaocloud: 3. Setting up kubeconfig"
+echo "kakaocloud: 4. Setting up kubeconfig"
 mkdir -p ~/.kube
 cat <<EOF > ~/.kube/config
 apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ${AUTH_DATA}
+    certificate-authority-data: "${AUTH_DATA}"
     server: ${API_SERVER}
   name: ${CLUSTER_NAME}
 contexts:
 - context:
     cluster: ${CLUSTER_NAME}
-    user: ${CLUSTER_NAME}-user
-  name: ${CLUSTER_NAME}
-current-context: ${CLUSTER_NAME}
+    user: ${CLUSTER_NAME}-admin
+  name: ${CLUSTER_NAME}-admin@${CLUSTER_NAME}
+current-context: ${CLUSTER_NAME}-admin@${CLUSTER_NAME}
 kind: Config
 preferences: {}
 users:
-- name: ${CLUSTER_NAME}-user
+- name: ${CLUSTER_NAME}-admin
   user:
-    token: ${ACC_KEY}
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      args: null
+      command: kic-iam-auth
+      env:
+      - name: "OS_AUTH_URL"
+        value: "https://iam.kakaocloud.com/identity/v3"
+      - name: "OS_AUTH_TYPE"
+        value: "v3applicationcredential"
+      - name: "OS_APPLICATION_CREDENTIAL_ID"
+        value: "${ACC_KEY}"
+      - name: "OS_APPLICATION_CREDENTIAL_SECRET"
+        value: "${SEC_KEY}"
+      - name: "OS_REGION_NAME"
+        value: "kr-central-2"
 EOF
 
 chmod 600 ~/.kube/config
@@ -50,6 +70,6 @@ chown $(whoami):$(whoami) ~/.kube/config
 echo "kakaocloud: kubeconfig setup completed"
 
 # Kubernetes 클러스터 연결 확인
-echo "kakaocloud: 4. Checking Kubernetes cluster connection"
+echo "kakaocloud: 5. Checking Kubernetes cluster connection"
 kubectl get nodes || { echo "kakaocloud: Failed to communicate with Kubernetes cluster"; exit 1; }
 echo "kakaocloud: Successfully communicated with Kubernetes cluster"
