@@ -1,18 +1,19 @@
 #!/bin/bash
 
 # 환경 변수 설정
-PROJECT_NAME="your_project_name"
-ACC_KEY="your_account_key"
-SEC_KEY="your_secret_key"
+PROJECT_NAME="kakao-sw-club"
+ACC_KEY="005bb667e6574c61a5d4577262b61d89y"
+SEC_KEY="652351ba4ebc7feec7e2e07582926c4ba7a06b09f2a1dbf4c223d15e15769a30761e63"
 FRONT_IMAGE_NAME="frontend_image"
 BACK_IMAGE_NAME="backend_image"
-IMAGE_VERSION="1.0"
-DOCKER_REGISTRY="${PROJECT_NAME}.kr-central-2.kcr.dev/kakao-registry"
+IMAGE_VERSION="1.0"\
+Refgistry_NAME="kakao-registry"
+DOCKER_REGISTRY="${PROJECT_NAME}.kr-central-2.kcr.dev/${Refgistry_NAME}"
 REACT_APP_API_URL="your_api_url"
 
 # Docker 로그인
 docker_login() {
-    docker login ${PROJECT_NAME}.kr-central-2.kcr.dev --username ${ACC_KEY} --password ${SEC_KEY}
+    echo "${SEC_KEY}" | sudo docker login ${PROJECT_NAME}.kr-central-2.kcr.dev --username ${ACC_KEY} --password-stdin
 }
 
 build() {
@@ -20,12 +21,12 @@ build() {
         k8s_front)
             echo "Building front-end..."
             # 프론트엔드 빌드 명령어
-            docker build --build-arg REACT_APP_API_URL=${REACT_APP_API_URL} -t ${FRONT_IMAGE_NAME} -f Dockerfile.front .
+            sudo docker build --build-arg REACT_APP_API_URL=${REACT_APP_API_URL} -t ${FRONT_IMAGE_NAME} -f Dockerfile.front .
             ;;
         k8s_back)
             echo "Building back-end..."
             # 백엔드 빌드 명령어
-            docker build -t ${BACK_IMAGE_NAME} -f Dockerfile.back .
+            sudo docker build -t ${BACK_IMAGE_NAME} -f Dockerfile.back .
             ;;
         k8s_all)
             build k8s_front
@@ -45,13 +46,13 @@ push_image() {
     case $1 in
         k8s_front)
             echo "Pushing front-end Docker image..."
-            docker tag ${FRONT_IMAGE_NAME} ${DOCKER_REGISTRY}/${FRONT_IMAGE_NAME}:${IMAGE_VERSION}
-            docker push ${DOCKER_REGISTRY}/${FRONT_IMAGE_NAME}:${IMAGE_VERSION}
+            sudo docker tag ${FRONT_IMAGE_NAME} ${DOCKER_REGISTRY}/${FRONT_IMAGE_NAME}:${IMAGE_VERSION}
+            sudo docker push ${DOCKER_REGISTRY}/${FRONT_IMAGE_NAME}:${IMAGE_VERSION}
             ;;
         k8s_back)
             echo "Pushing back-end Docker image..."
-            docker tag ${BACK_IMAGE_NAME} ${DOCKER_REGISTRY}/${BACK_IMAGE_NAME}:${IMAGE_VERSION}
-            docker push ${DOCKER_REGISTRY}/${BACK_IMAGE_NAME}:${IMAGE_VERSION}
+            sudo docker tag ${BACK_IMAGE_NAME} ${DOCKER_REGISTRY}/${BACK_IMAGE_NAME}:${IMAGE_VERSION}
+            sudo docker push ${DOCKER_REGISTRY}/${BACK_IMAGE_NAME}:${IMAGE_VERSION}
             ;;
         k8s_all)
             push_image k8s_front
