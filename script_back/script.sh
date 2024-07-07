@@ -7,8 +7,8 @@ SEC_KEY="652351ba4ebc7feec7e2e07582926c4ba7a06b09f2a1dbf4c223d15e15769a30761e63"
 FRONT_IMAGE_NAME="frontend_image"
 BACK_IMAGE_NAME="backend_image"
 IMAGE_VERSION="1.0"\
-Refgistry_NAME="kakao-registry"
-DOCKER_REGISTRY="${PROJECT_NAME}.kr-central-2.kcr.dev/${Refgistry_NAME}"
+REGISTRY_NAME="kakao-registry"
+DOCKER_REGISTRY="${PROJECT_NAME}.kr-central-2.kcr.dev/${REGISTRY_NAME}"
 REACT_APP_API_URL="your_api_url"
 
 # Docker 로그인
