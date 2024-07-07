@@ -16,16 +16,15 @@ docker_login() {
     echo "${SEC_KEY}" | sudo docker login ${PROJECT_NAME}.kr-central-2.kcr.dev --username ${ACC_KEY} --password-stdin
 }
 
+# 이미지 빌드
 build() {
     case $1 in
         k8s_front)
             echo "Building front-end..."
-            # 프론트엔드 빌드 명령어
             sudo docker build --build-arg REACT_APP_API_URL=${REACT_APP_API_URL} -t ${FRONT_IMAGE_NAME} -f Dockerfile.front .
             ;;
         k8s_back)
             echo "Building back-end..."
-            # 백엔드 빌드 명령어
             sudo docker build -t ${BACK_IMAGE_NAME} -f Dockerfile.back .
             ;;
         k8s_all)
@@ -38,10 +37,7 @@ build() {
     esac
 }
 
-make_image() {
-    echo "Docker 이미지 생성은 빌드 과정에서 수행됩니다."
-}
-
+# 이미지 푸시
 push_image() {
     case $1 in
         k8s_front)
@@ -64,6 +60,28 @@ push_image() {
     esac
 }
 
+# 환경 변수 인코딩 및 Secret 생성
+create_secret() {
+    ENCODED_ACC_KEY=$(echo -n $ACC_KEY | base64)
+    ENCODED_SEC_KEY=$(echo -n $SEC_KEY | base64)
+    
+    cat <<EOF > secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+data:
+  ACC_KEY: "$ENCODED_ACC_KEY"
+  SEC_KEY: "$ENCODED_SEC_KEY"
+EOF
+
+    echo "Secret file has been generated: secret.yaml"
+    kubectl apply -f secret.yaml
+    echo "Secret has been applied to the Kubernetes cluster."
+}
+
+# 전체 과정 실행
 do_k8s_front_all() {
     build k8s_front
     push_image k8s_front
@@ -77,16 +95,20 @@ do_k8s_back_all() {
 do_k8s_all() {
     do_k8s_front_all
     do_k8s_back_all
+    create_secret
+    deploy_helm
 }
 
+# Helm 차트 배포
+deploy_helm() {
+    helm upgrade --install myapp ./myapp
+}
+
+# 명령어 처리
 case $1 in
     build)
         docker_login
         build $2
-        ;;
-    make_image)
-        docker_login
-        make_image $2
         ;;
     push_image)
         docker_login
