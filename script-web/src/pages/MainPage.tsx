@@ -30,15 +30,17 @@ const Subtitle = styled.h3`
     font-size: 1.2em;
     font-weight: normal;
 `;
-
+/*
 const Header = styled.h2`
     text-align: center;
     color: #3c1e1e;
     margin-bottom: 0.5em;
     font-size: 2em;
-    font-weight: bold;
-    color: #ffe100; /* 카카오 노란색 */
-`;
+    font-weight: bold; */
+    //color: #ffe100; /* 카카오 노란색 */ 
+//`;  
+
+
 
 const GroupContainer = styled.div`
     margin-bottom: 1.5em;
@@ -90,7 +92,7 @@ interface KubeConfig {
 const MainPage: React.FC = () => {
     const [accessKey, setAccessKey] = useState('');
     const [secretKey, setSecretKey] = useState('');
-    const [email, setEmail] = useState('');
+    //const [email, setEmail] = useState('');
     const [projectName, setProjectName] = useState('');
     const [clusterList, setClusterList] = useState<string[]>([]);
     const [clusterName, setClusterName] = useState('');
@@ -135,9 +137,6 @@ const MainPage: React.FC = () => {
         await fetchInstanceLists();
     };
 
-    useEffect(() => {
-        fetchInstanceLists();
-    }, []);
 
     const validateForm = () => {
         const newErrors: { [key: string]: string } = {};
@@ -419,19 +418,18 @@ sudo -E ./script.sh`;
         }
         setLoading(false);
     };
-
+    /*
     const handleConsoleClick = (url: string) => {
         window.open(url, '_blank');
     };
-
-    useEffect(() => {
+    */
+    /*useEffect(() => {
         fetchInstanceLists();
     }, []);
-
-    const formData = {
+    */
+    /*const formData = {
         accessKey,
         secretKey,
-        email,
         projectName,
         clusterName,
         apiEndpoint,
@@ -442,7 +440,7 @@ sudo -E ./script.sh`;
         dockerImageName,
         dockerJavaVersion,
     };
-
+    */
     return (
         <Container>
             <Title>Bastion VM 스크립트 생성</Title>
@@ -472,7 +470,6 @@ sudo -E ./script.sh`;
                     showApiButton
                     onApiClick={() => handleApiButtonClick('fetchProjects', handleFetchProjectsAndClusters)}
                     isLoading={loadingButton === 'fetchProjects'}
-                    disableAll={!!loadingButton}
                     error={errors.projectName}
                 />
             </GroupContainer>
@@ -482,7 +479,6 @@ sudo -E ./script.sh`;
                     value={clusterName}
                     options={clusterList}
                     onChange={handleClusterNameChange}
-                    disabled={loadingButton === 'fetchClusters'}
                 />
                 <InputBox
                     label="5. 클러스터 이름"
@@ -490,9 +486,6 @@ sudo -E ./script.sh`;
                     value={clusterName}
                     onChange={(e) => setClusterName(e.target.value)}
                     height="100px"
-                    onApiClick={() => handleApiButtonClick('fetchClusterName', fetchKubeConfig, clusterName)}
-                    isLoading={loadingButton === 'fetchClusterName'}
-                    disableAll={!!loadingButton}
                     error={errors.clusterName}
                 />
                 <InputBox
@@ -501,9 +494,6 @@ sudo -E ./script.sh`;
                     value={apiEndpoint}
                     onChange={(e) => setApiEndpoint(e.target.value)}
                     height="100px"
-                    onApiClick={() => handleApiButtonClick('fetchApiEndpoint', fetchKubeConfig, clusterName)}
-                    isLoading={loadingButton === 'fetchApiEndpoint'}
-                    disableAll={!!loadingButton}
                     error={errors.apiEndpoint}
                 />
                 <InputBox
@@ -512,9 +502,6 @@ sudo -E ./script.sh`;
                     value={authData}
                     onChange={(e) => setAuthData(e.target.value)}
                     height="100px"
-                    onApiClick={() => handleApiButtonClick('fetchAuthData', fetchKubeConfig, clusterName)}
-                    isLoading={loadingButton === 'fetchAuthData'}
-                    disableAll={!!loadingButton}
                     error={errors.authData}
                 />
             </GroupContainer>
@@ -532,9 +519,6 @@ sudo -E ./script.sh`;
                     value={primaryEndpoint}
                     onChange={(e) => setPrimaryEndpoint(e.target.value)}
                     height="100px"
-                    onApiClick={() => handleApiButtonClick('fetchInstancePrimaryEndpoints', fetchInstanceEndpoints, instanceName)}
-                    isLoading={loadingButton === 'fetchInstancePrimaryEndpoints'}
-                    disableAll={!!loadingButton}
                     error={errors.primaryEndpoint}
                 />
                 <InputBox
@@ -543,9 +527,7 @@ sudo -E ./script.sh`;
                     value={standbyEndpoint}
                     onChange={(e) => setStandbyEndpoint(e.target.value)}
                     height="100px"
-                    onApiClick={() => handleApiButtonClick('fetchInstanceStandbyEndpoints', fetchInstanceEndpoints, instanceName)}
                     isLoading={loadingButton === 'fetchInstanceStandbyEndpoints'}
-                    disableAll={!!loadingButton}
                     error={errors.standbyEndpoint}
                 />
             </GroupContainer>
