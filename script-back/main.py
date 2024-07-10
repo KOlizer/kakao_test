@@ -5,32 +5,36 @@ from fastapi.middleware.cors import CORSMiddleware
 import yaml
 import json
 
+# FastAPI 인스턴스를 초기화
 app = FastAPI()
 
+# 모든 출처에서의 요청을 허용하도록 CORS 미들웨어 추가
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # 모든 출처 허용
+    allow_credentials=True,  # 자격 증명 허용
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
 )
 
+# 요청 본문에 대한 Pydantic 모델 정의
 class UserCredentials(BaseModel):
-    access_key_id: str
-    access_key_secret: str
+    access_key_id: str  # 액세스 키 ID
+    access_key_secret: str  # 액세스 키 비밀
 
 class ClusterCredentials(UserCredentials):
-    cluster_name: str
+    cluster_name: str  # 클러스터 이름
 
 class InstanceSetCredentials(UserCredentials):
-    instance_set_name: str
+    instance_set_name: str  # 인스턴스 세트 이름
 
+# Kakao Cloud IAM에서 토큰 및 사용자/프로젝트 세부 정보를 가져오는 함수
 def get_token_and_details(credentials: UserCredentials):
     url = "https://iam.kakaocloud.com/identity/v3/auth/tokens"
     payload = {
         "auth": {
             "identity": {
-                "methods": ["application_credential"],
+                "methods": ["application_credential"],  # 애플리케이션 자격 증명을 사용한 인증
                 "application_credential": {
                     "id": credentials.access_key_id,
                     "secret": credentials.access_key_secret,
@@ -43,17 +47,17 @@ def get_token_and_details(credentials: UserCredentials):
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
-    token = response.headers.get("X-Subject-Token")
+    token = response.headers.get("X-Subject-Token")  # 응답 헤더에서 토큰 가져오기
     response_json = response.json()
-    user_id = response_json.get("token", {}).get("user", {}).get("id", {})
+    user_id = response_json.get("token", {}).get("user", {}).get("id", {})  # 사용자 ID 가져오기
     domain_id = (
         response_json.get("token", {}).get("user", {}).get("domain", {}).get("id")
-    )
+    )  # 도메인 ID 가져오기
     domain_name = (
         response_json.get("token", {}).get("user", {}).get("domain", {}).get("name")
-    )
-    project_id = response_json.get("token", {}).get("project", {}).get("id")
-    project_name = response_json.get("token", {}).get("project", {}).get("name")
+    )  # 도메인 이름 가져오기
+    project_id = response_json.get("token", {}).get("project", {}).get("id")  # 프로젝트 ID 가져오기
+    project_name = response_json.get("token", {}).get("project", {}).get("name")  # 프로젝트 이름 가져오기
 
     return {
         "token": token,
@@ -64,12 +68,12 @@ def get_token_and_details(credentials: UserCredentials):
         "project_name": project_name,
     }
 
-
+# 토큰 세부 정보를 가져오는 엔드포인트
 @app.post("/get-token-details")
 def get_token_details(credentials: UserCredentials):
     return get_token_and_details(credentials)
 
-
+# 클러스터 목록을 가져오는 엔드포인트
 @app.post("/get-clusters")
 def get_clusters(credentials: UserCredentials):
     details = get_token_and_details(credentials)
@@ -87,12 +91,14 @@ def get_clusters(credentials: UserCredentials):
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
-    
+
+# 프로젝트 이름을 가져오는 엔드포인트
 @app.post("/get-project-name")
 def get_project_name(credentials: UserCredentials):
     details = get_token_and_details(credentials)
     return {"project_name": details["project_name"]}
 
+# 클러스터의 kubeconfig를 가져오는 엔드포인트
 @app.post("/get-kubeconfig")
 def get_kubeconfig(credentials: ClusterCredentials):
     details = get_token_and_details(credentials)
@@ -113,12 +119,12 @@ def get_kubeconfig(credentials: ClusterCredentials):
 
     try:
         kubeconfig_yaml = response.text
-        kubeconfig_json = yaml.safe_load(kubeconfig_yaml)
+        kubeconfig_json = yaml.safe_load(kubeconfig_yaml)  # YAML 응답을 JSON으로 변환
         return kubeconfig_json
     except yaml.YAMLError as e:
-        raise HTTPException(status_code=500, detail="Error parsing YAML response")
+        raise HTTPException(status_code=500, detail="YAML 응답을 파싱하는 중 오류 발생")
 
-
+# 인스턴스 그룹 목록을 가져오는 엔드포인트
 @app.post("/get-instance-groups")
 def get_instance_groups(credentials: UserCredentials):
     details = get_token_and_details(credentials)
@@ -137,10 +143,11 @@ def get_instance_groups(credentials: UserCredentials):
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
-    instance_groups = response.json() 
+    instance_groups = response.json()
     instance_set_names = [item["instanceSet"]["instanceSetName"] for item in instance_groups["instanceSetWithStatusList"]]
     return instance_set_names
 
+# 인스턴스 엔드포인트를 가져오는 엔드포인트
 @app.post("/get-instance-endpoints")
 def get_instance_endpoints(credentials: InstanceSetCredentials):
     details = get_token_and_details(credentials)
@@ -159,7 +166,7 @@ def get_instance_endpoints(credentials: InstanceSetCredentials):
     data = response.json()
     instance_set = next((item for item in data.get("instanceSetWithStatusList", []) if item["instanceSet"]["instanceSetName"] == credentials.instance_set_name), None)
     if instance_set is None:
-        raise HTTPException(status_code=404, detail="Instance set not found")
+        raise HTTPException(status_code=404, detail="인스턴스 세트를 찾을 수 없음")
     
     endpoints = instance_set.get("instanceSet", {}).get("endpoint", [])
     primary = endpoints[0] if endpoints else None
@@ -167,6 +174,7 @@ def get_instance_endpoints(credentials: InstanceSetCredentials):
 
     return {"primary_endpoint": primary, "standby_endpoint": standby}
 
+# 사용자와 연관된 프로젝트 목록을 가져오는 엔드포인트
 @app.post("/get-projects")
 def get_projects(credentials: UserCredentials):
     details = get_token_and_details(credentials)
@@ -178,7 +186,7 @@ def get_projects(credentials: UserCredentials):
 
     return response.json()
 
-
+# 스크립트가 직접 실행될 경우 uvicorn을 사용하여 앱 실행
 if __name__ == "__main__":
     import uvicorn
 
