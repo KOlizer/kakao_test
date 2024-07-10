@@ -1,14 +1,15 @@
-from fastapi import FastAPI, HTTPException, Body
-from pydantic import BaseModel
-import requests
-from fastapi.middleware.cors import CORSMiddleware
-import yaml
-import json
+from fastapi import FastAPI, HTTPException, Body  # FastAPI 관련 모듈 가져오기
+from pydantic import BaseModel  # 데이터 검증을 위한 Pydantic 모듈 가져오기
+import requests  # HTTP 요청을 보내기 위한 requests 모듈 가져오기
+from fastapi.middleware.cors import CORSMiddleware  # CORS 설정을 위한 모듈 가져오기
+import yaml  # YAML 데이터를 처리하기 위한 모듈 가져오기
+import json  # JSON 데이터를 처리하기 위한 모듈 가져오기
 
-# FastAPI 인스턴스를 초기화
+# FastAPI 애플리케이션 생성
 app = FastAPI()
 
-# 모든 출처에서의 요청을 허용하도록 CORS 미들웨어 추가
+# CORS 미들웨어 추가
+# CORS(Cross-Origin Resource Sharing)는 다른 출처의 웹 페이지가 API에 접근할 수 있도록 허용하는 것
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 모든 출처 허용
@@ -17,38 +18,40 @@ app.add_middleware(
     allow_headers=["*"],  # 모든 헤더 허용
 )
 
-# 요청 본문에 대한 Pydantic 모델 정의
+# 사용자 자격 증명을 정의하는 Pydantic 모델
 class UserCredentials(BaseModel):
     access_key_id: str  # 액세스 키 ID
     access_key_secret: str  # 액세스 키 비밀
 
+# 클러스터 자격 증명을 정의하는 Pydantic 모델
 class ClusterCredentials(UserCredentials):
     cluster_name: str  # 클러스터 이름
 
+# 인스턴스 세트 자격 증명을 정의하는 Pydantic 모델
 class InstanceSetCredentials(UserCredentials):
     instance_set_name: str  # 인스턴스 세트 이름
 
-# Kakao Cloud IAM에서 토큰 및 사용자/프로젝트 세부 정보를 가져오는 함수
+# Kakao Cloud IAM에서 토큰과 사용자/프로젝트 정보를 가져오는 함수
 def get_token_and_details(credentials: UserCredentials):
-    url = "https://iam.kakaocloud.com/identity/v3/auth/tokens"
+    url = "https://iam.kakaocloud.com/identity/v3/auth/tokens"  # 토큰을 요청할 URL
     payload = {
         "auth": {
             "identity": {
                 "methods": ["application_credential"],  # 애플리케이션 자격 증명을 사용한 인증
                 "application_credential": {
-                    "id": credentials.access_key_id,
-                    "secret": credentials.access_key_secret,
+                    "id": credentials.access_key_id,  # 사용자로부터 받은 ID
+                    "secret": credentials.access_key_secret,  # 사용자로부터 받은 비밀
                 },
             }
         }
     }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code != 201:
+    headers = {"Content-Type": "application/json"}  # 요청 헤더에 콘텐츠 타입 지정
+    response = requests.post(url, json=payload, headers=headers)  # POST 요청을 보내서 토큰을 받음
+    if response.status_code != 201:  # 응답 상태 코드가 201이 아니면 에러 발생
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     token = response.headers.get("X-Subject-Token")  # 응답 헤더에서 토큰 가져오기
-    response_json = response.json()
+    response_json = response.json()  # 응답을 JSON으로 변환
     user_id = response_json.get("token", {}).get("user", {}).get("id", {})  # 사용자 ID 가져오기
     domain_id = (
         response_json.get("token", {}).get("user", {}).get("domain", {}).get("id")
@@ -88,7 +91,7 @@ def get_clusters(credentials: UserCredentials):
         "X-Kep-Project-Name": details["project_name"],
     }
     response = requests.get(url, headers=headers)
-    if response.status_code != 200:
+    if response.status_code != 200:  # 응답 상태 코드가 200이 아니면 에러 발생
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
 
@@ -114,7 +117,7 @@ def get_kubeconfig(credentials: ClusterCredentials):
     }
     response = requests.get(url, headers=headers)
 
-    if response.status_code != 200:
+    if response.status_code != 200:  # 응답 상태 코드가 200이 아니면 에러 발생
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     try:
@@ -140,7 +143,7 @@ def get_instance_groups(credentials: UserCredentials):
     }
     response = requests.get(url, headers=headers)
 
-    if response.status_code != 200:
+    if response.status_code != 200:  # 응답 상태 코드가 200이 아니면 에러 발생
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     instance_groups = response.json()
@@ -160,7 +163,7 @@ def get_instance_endpoints(credentials: InstanceSetCredentials):
         "X-Kep-Project-Name": details["project_name"],
     }
     response = requests.get(url, headers=headers)
-    if response.status_code != 200:
+    if response.status_code != 200:  # 응답 상태 코드가 200이 아니면 에러 발생
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     data = response.json()
@@ -181,7 +184,7 @@ def get_projects(credentials: UserCredentials):
     url = f"https://iam.kakaocloud.com/identity/v3/users/{details['user_id']}/projects"
     headers = {"X-Auth-token": details["token"]}
     response = requests.get(url, headers=headers)
-    if response.status_code != 200:
+    if response.status_code != 200:  # 응답 상태 코드가 200이 아니면 에러 발생
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     return response.json()
