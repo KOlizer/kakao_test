@@ -12,7 +12,7 @@ FILE_PATH = '/path/to/vm_info/lsh-vm.txt'  # 업로드할 파일 경로 (vm에 �
 FILE_NAME_IN_REPO = os.path.basename(FILE_PATH)  # 리포지토리에 저장될 파일 이름 (로컬 파일 경로에서 추출)
 COMMIT_MESSAGE = f'Add {FILE_NAME_IN_REPO} using PyGithub'  # 커밋 메시지 
 PR_TITLE = f'{FILE_NAME_IN_REPO} 추가'  # PR 제목 
-PR_BODY = f'{FILE_NAME_IN_REPO}의 요청사항: {}'  # PR 내용
+PR_BODY = f'{FILE_NAME_IN_REPO}의 요청사항: '  # PR 내용
 BRANCH_NAME = 'main'  # 포크된 저장소의 브랜치 이름
 
 # 깃허브에 인증
