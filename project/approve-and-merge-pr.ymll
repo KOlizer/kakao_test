@@ -1,0 +1,42 @@
+name: Approve and Merge PR
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  approve-and-merge:
+    if: github.event.issue.pull_request != null && github.event.comment.body == '/approve'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Approve PR
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          PR_NUMBER=$(jq -r .issue.number < $GITHUB_EVENT_PATH)
+          REPO=$(jq -r .repository.full_name < $GITHUB_EVENT_PATH)
+          curl -X POST \
+            -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews \
+            -d '{"event":"APPROVE"}'
+
+      - name: Merge PR
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          PR_NUMBER=$(jq -r .issue.number < $GITHUB_EVENT_PATH)
+          REPO=$(jq -r .repository.full_name < $GITHUB_EVENT_PATH)
+          curl -X PUT \
+            -H "Authorization: token $PERSONAL_ACCESS_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/merge \
+            -d '{"merge_method":"merge"}'
