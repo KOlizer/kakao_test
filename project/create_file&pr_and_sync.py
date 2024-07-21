@@ -6,12 +6,12 @@ import requests
 import os
 import subprocess
 import json
-from datetime import datetime  # datetime 모듈 추가
+from datetime import datetime
 
 app = Flask(__name__)
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = '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'
+GITHUB_TOKEN = '11' #실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -38,19 +38,14 @@ with open(FILE_PATH, 'r', encoding='utf-8') as file:
 try:
     existing_file = repo_user.get_contents(FILE_NAME_IN_REPO, ref=BRANCH_NAME)
     repo_user.update_file(existing_file.path, COMMIT_MESSAGE, content, existing_file.sha, branch=BRANCH_NAME)
-    print("File updated successfully in forked repository")
+    print("파일을 성공적으로 업로드했습니다.")
 except:
     repo_user.create_file(FILE_NAME_IN_REPO, COMMIT_MESSAGE, content, branch=BRANCH_NAME)
     print("File uploaded successfully to forked repository")
 
 # 포크된 리포지토리의 소유자 확인
 fork_owner = repo_user.owner.login
-print(f"Forked repository owner: {fork_owner}")
-
-# 포크된 리포지토리의 브랜치들 확인
-branches = repo_user.get_branches()
-branch_names = [branch.name for branch in branches]
-print(f"Available branches in forked repository: {branch_names}")
+print(f"포크된 리포지토리 사용자: {fork_owner}")
 
 # 원본 리포지토리의 기본 브랜치
 base_branch = 'main'
@@ -68,7 +63,7 @@ def create_pull_request(fork_owner, base_repo, title, body, head_branch, base_br
         'head': f'{fork_owner}:{head_branch}',  # 사용자명:브랜치명 형식
         'base': base_branch  # 원본 리포지토리의 기본 브랜치
     }
-    print(f"Creating PR with data: {data}")  # 로깅 추가
+    print(f"생성하는데 사용된 PR 데이터: {data}")  # 로깅 추가
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
     return response.json()
@@ -94,16 +89,16 @@ def sync_fork_with_upstream():
     run_command(f"git remote set-url origin {origin_url_with_token}", cwd=git_dir)
     run_command(f"git remote set-url upstream {upstream_url}", cwd=git_dir)
     
-    # 원본 리포지토리에서 변경 사항 가져오기
+    print("원본 리포지토리에서 변경 사항 가져오기")
     run_command("git fetch upstream", cwd=git_dir)
     
-    # 로컬 브랜치로 체크아웃
+    print("로컬 브랜치로 체크아웃")
     run_command("git checkout main", cwd=git_dir)
     
-    # 원본 리포지토리의 변경 사항으로 리베이스
+    print("원본 리포지토리의 변경 사항으로 리베이스")
     run_command("git reset --hard upstream/main", cwd=git_dir)
-    
-    # 변경 사항 푸시
+
+    print("변경 사항 푸시")
     run_command("git push origin main --force", cwd=git_dir)
 
 # PR 코멘트 가져오기
@@ -117,6 +112,27 @@ def get_pr_comments(pr_number):
     response.raise_for_status()
     return response.json()
 
+# GitHub Actions 워크플로우 트리거 함수
+def trigger_github_actions_workflow(pr_number):
+    url = f'https://api.github.com/repos/{DEST_REPO}/actions/workflows/approve-and-merge-pr.yml/dispatches'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    data = {
+        'ref': 'main',
+        'inputs': {
+            'pr_number': str(pr_number)
+        }
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 204:
+        print(f"GitHub Actions workflow triggered successfully for PR #{pr_number}.")
+        return True
+    else:
+        print(f"Failed to trigger GitHub Actions workflow: {response.text}")
+        return False
+    
 # PR 내역 저장 함수
 def save_pr_history(pr_data, comments):
     history = {
@@ -150,6 +166,24 @@ def verify_signature(payload, signature):
     print(f"Signature from GitHub: {signature}")
     print(f"Generated signature: {generated_signature}")
     return hmac.compare_digest(generated_signature, signature)
+
+# 추가 코드 실행 함수
+def run_create_vm_code():
+    try:
+        result = subprocess.run(["python3", "/home/ubuntu/push_to_github/create_vm.py"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error running create_vm.py: {result.stderr}")
+            return False
+        else:
+            print(f"create_vm.py output: {result.stdout}")
+            if "success" in result.stdout:
+                return True
+            else:
+                return False
+    except Exception as e:
+        print(f"Exception running create_vm.py: {e}")
+        return False
+
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -185,6 +219,21 @@ def webhook():
             pr_data['pull_request']['merge_commit_message'] = pr_data['pull_request']['merge_commit_message'] if 'merge_commit_message' in pr_data['pull_request'] else ''
             save_pr_history(pr_data['pull_request'], comments)
             sync_fork_with_upstream()
+
+    if event == 'issue_comment':
+        comment_data = request.json
+        comment_body = comment_data['comment']['body']
+        if '/approve' in comment_body:
+            pr_number = comment_data['issue']['number']
+            print(f"Approval comment detected on PR #{pr_number}.")
+            if run_create_vm_code():
+                print("VM이 성공적으로 생성되었습니다, triggering GitHub Actions workflow.")
+                if trigger_github_actions_workflow(pr_number):
+                    print(f"PR #{pr_number} approved and merged successfully.")
+                else:
+                    print(f"Failed to approve and/or merge PR #{pr_number}.")
+            else:
+                print("VM creation failed, not approving the PR.")
 
     return jsonify({'message': 'Success'}), 200
 
