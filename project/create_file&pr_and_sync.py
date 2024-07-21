@@ -11,7 +11,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = '11' #실제 토큰 값
+GITHUB_TOKEN = 'g11'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -19,8 +19,8 @@ SOURCE_REPO = 'KOlizer/Orign-copy'  # 포크된 리포지토리 이름
 DEST_REPO = 'syu-admin/Orign'  # 원본 리포지토리 이름
 FILE_PATH = '/home/ubuntu/push_to_github/test_rejection'  # 업로드할 파일 경로 (vm에 맞게 변경)
 FILE_NAME_IN_REPO = os.path.basename(FILE_PATH)  # 리포지토리에 저장될 파일 이름 (로컬 파일 경로에서 추출)
-COMMIT_MESSAGE = f'Add {FILE_NAME_IN_REPO} using PyGithub'  # 커밋 메시지 
-PR_TITLE = f'{FILE_NAME_IN_REPO} 추가'  # PR 제목 
+COMMIT_MESSAGE = f'Add {FILE_NAME_IN_REPO} using PyGithub'  # 커밋 메시지
+PR_TITLE = f'{FILE_NAME_IN_REPO} 추가'  # PR 제목
 PR_BODY = f'{FILE_NAME_IN_REPO}의 요청사항: '  # PR 내용
 BRANCH_NAME = 'main'  # 포크된 저장소의 브랜치 이름
 REPO_DIR = '/home/ubuntu/Orign-copy'  # 로컬 Git 리포지토리 경로
@@ -85,17 +85,20 @@ def sync_fork_with_upstream():
     # 원격 설정
     origin_url_with_token = f"https://{GITHUB_TOKEN}@github.com/KOlizer/Orign-copy.git"
     upstream_url = f"https://{GITHUB_TOKEN}@github.com/syu-admin/Orign.git"
-
+    
+    print("봇 리포지토리 origin으로 등록")
     run_command(f"git remote set-url origin {origin_url_with_token}", cwd=git_dir)
+    
+    print("원본 리포지토리를 upstream으로 등록")
     run_command(f"git remote set-url upstream {upstream_url}", cwd=git_dir)
     
-    print("원본 리포지토리에서 변경 사항 가져오기")
+    print("upstream 패치")
     run_command("git fetch upstream", cwd=git_dir)
     
-    print("로컬 브랜치로 체크아웃")
+    print("메인 브랜치 체크아웃")
     run_command("git checkout main", cwd=git_dir)
     
-    print("원본 리포지토리의 변경 사항으로 리베이스")
+    print("origin을 upstream으로 리베이스")
     run_command("git reset --hard upstream/main", cwd=git_dir)
 
     print("변경 사항 푸시")
@@ -127,12 +130,12 @@ def trigger_github_actions_workflow(pr_number):
     }
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 204:
-        print(f"GitHub Actions workflow triggered successfully for PR #{pr_number}.")
+        print(f"PR #{pr_number}가 성공적으로 GitHub Actions 작업이 성공적으로 시작되었습니다.")
         return True
     else:
         print(f"Failed to trigger GitHub Actions workflow: {response.text}")
         return False
-    
+
 # PR 내역 저장 함수
 def save_pr_history(pr_data, comments):
     history = {
@@ -157,14 +160,14 @@ def save_pr_history(pr_data, comments):
     pr_history.append(history)
     with open(PR_HISTORY_FILE, 'w', encoding='utf-8') as file:
         json.dump(pr_history, file, ensure_ascii=False, indent=4)
-    print("PR history saved.")
+    print("PR 기록이 저장되었습니다.")
 
 # 웹훅 시그니처 검증 함수
 def verify_signature(payload, signature):
     mac = hmac.new(WEBHOOK_SECRET.encode(), msg=payload, digestmod=hashlib.sha1)
     generated_signature = 'sha1=' + mac.hexdigest()
-    print(f"Signature from GitHub: {signature}")
-    print(f"Generated signature: {generated_signature}")
+    print(f"GitHub에서 서명한 해시 값: {signature}")
+    print(f"생성된 서명: {generated_signature}")
     return hmac.compare_digest(generated_signature, signature)
 
 # 추가 코드 실행 함수
@@ -183,7 +186,6 @@ def run_create_vm_code():
     except Exception as e:
         print(f"Exception running create_vm.py: {e}")
         return False
-
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -206,13 +208,13 @@ def webhook():
             print("PR이 거절되었습니다. 포크된 리포지토리를 원본 리포지토리와 동기화합니다.")
             comments = get_pr_comments(pr_number)
             for comment in comments:
-                print(f"Comment by {comment['user']['login']}: {comment['body']}")
+                print(f"코멘트 남긴 유저 {comment['user']['login']}: {comment['body']}")
             save_pr_history(pr_data['pull_request'], comments)
             sync_fork_with_upstream()
         
         # PR이 병합되었을 때 동기화
         if action == 'closed' and merged:
-            print("PR이 병합되었습니다. 로컬 리포지토리를 원본 리포지토리와 동기화합니다.")
+            print("PR이 승인되었습니다. 로컬 리포지토리를 원본 리포지토리와 동기화합니다.")
             comments = get_pr_comments(pr_number)
             for comment in comments:
                 print(f"Comment by {comment['user']['login']}: {comment['body']}")
@@ -223,17 +225,20 @@ def webhook():
     if event == 'issue_comment':
         comment_data = request.json
         comment_body = comment_data['comment']['body']
-        if '/approve' in comment_body:
+        if '/approve' in comment_body:  # /approve 감지시
             pr_number = comment_data['issue']['number']
-            print(f"Approval comment detected on PR #{pr_number}.")
+            print(f"#{pr_number}에서 /approve가 감지되었습니다 PR")
             if run_create_vm_code():
-                print("VM이 성공적으로 생성되었습니다, triggering GitHub Actions workflow.")
+                print("VM이 성공적으로 생성되었습니다")
                 if trigger_github_actions_workflow(pr_number):
-                    print(f"PR #{pr_number} approved and merged successfully.")
+                    print(f"PR #{pr_number}의 Github Action을 시작합니다.")
                 else:
                     print(f"Failed to approve and/or merge PR #{pr_number}.")
             else:
                 print("VM creation failed, not approving the PR.")
+        if '/deny' in comment_body:  # /deny 감지시
+            pr_number = comment_data['issue']['number']
+            print(f"#{pr_number}에서 /deny가 감지되었습니다")
 
     return jsonify({'message': 'Success'}), 200
 
