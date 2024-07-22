@@ -11,7 +11,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = '11'  # 실제 토큰 값
+GITHUB_TOKEN = 'g121325wWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -122,6 +122,20 @@ def get_pr_comments(pr_number):
     response.raise_for_status()
     return response.json()
 
+# PR에 코멘트 추가 함수
+def add_comment_to_pr(pr_number, comment_body):
+    url = f'https://api.github.com/repos/{DEST_REPO}/issues/{pr_number}/comments'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    data = {
+        'body': comment_body
+    }
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    print(f"PR #{pr_number}에 코멘트가 추가되었습니다.")
+
 # /deny 명령의 코멘트 저장 함수
 def save_deny_comment(pr_number, comment):
     deny_comment = {
@@ -132,7 +146,7 @@ def save_deny_comment(pr_number, comment):
     }
     with open(DENY_COMMENTS_FILE, 'w', encoding='utf-8') as file:
         json.dump([deny_comment], file, ensure_ascii=False, indent=4)  # 덮어쓰기 방식으로 저장
-    print("Deny 코멘트가 저장되었습니다.")
+    print("deny 코멘트가 저장되었습니다.")
     
 # GitHub Actions 워크플로우 트리거 함수
 def trigger_github_actions_workflow(pr_number, action='approve'):
@@ -191,20 +205,27 @@ def verify_signature(payload, signature):
     return hmac.compare_digest(generated_signature, signature)
 
 # 추가 코드 실행 함수
-def run_create_vm_code():
+def run_create_vm_code(pr_number):
     try:
         result = subprocess.run(["python3", "/home/ubuntu/push_to_github/create_vm.py"], capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"Error running create_vm.py: {result.stderr}")
+            error_message = f"Error running create_vm.py: {result.stderr}"
+            print(error_message)
+            add_comment_to_pr(pr_number, error_message)  # PR에 실패 원인 코멘트 추가
             return False
         else:
             print(f"create_vm.py output: {result.stdout}")
             if "success" in result.stdout:
                 return True
             else:
+                error_message = f"VM 생성 스크립트가 생성 실패되었습니다\n실패 사유: {result.stdout}"
+                print(error_message)
+                add_comment_to_pr(pr_number, error_message)  # PR에 실패 원인 코멘트 추가
                 return False
     except Exception as e:
-        print(f"Exception running create_vm.py: {e}")
+        error_message = f"Exception running create_vm.py: {e}"
+        print(error_message)
+        add_comment_to_pr(pr_number, error_message)  # PR에 실패 원인 코멘트 추가
         return False
 
 @app.route('/webhook', methods=['POST'])
@@ -247,15 +268,15 @@ def webhook():
         comment_body = comment_data['comment']['body']
         if '/approve' in comment_body:  # /approve 감지시
             pr_number = comment_data['issue']['number']
-            print(f"#{pr_number}에서 /approve가 감지되었습니다 PR")
-            if run_create_vm_code():
+            print(f"#{pr_number}에서 /approve가 감지되었습니다")
+            if run_create_vm_code(pr_number):
                 print("VM이 성공적으로 생성되었습니다")
                 if trigger_github_actions_workflow(pr_number):
                     print(f"PR #{pr_number}의 'approve' 작업 진행중입니다.")
                 else:
                     print(f"Failed to approve and/or merge PR #{pr_number}.")
             else:
-                print("VM creation failed, not approving the PR.")
+                print("VM 생성 실패 로직 중단.")
         if '/deny' in comment_body:  # /deny 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /deny가 감지되었습니다")
