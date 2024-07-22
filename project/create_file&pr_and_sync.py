@@ -1,17 +1,17 @@
-from flask import Flask, request, jsonify
-import hmac
-import hashlib
-from github import Github
-import requests
 import os
 import subprocess
-import json
+import hmac
+import hashlib
 from datetime import datetime
+import json
+import requests
+from github import Github
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'g11'  # 실제 토큰 값
+GITHUB_TOKEN = '11'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -23,50 +23,15 @@ COMMIT_MESSAGE = f'Add {FILE_NAME_IN_REPO} using PyGithub'  # 커밋 메시지
 PR_TITLE = f'{FILE_NAME_IN_REPO} 추가'  # PR 제목
 PR_BODY = f'{FILE_NAME_IN_REPO}의 요청사항: '  # PR 내용
 BRANCH_NAME = 'main'  # 포크된 저장소의 브랜치 이름
+base_branch = 'main'  # 원본 리포지토리의 기본 브랜치
 REPO_DIR = '/home/ubuntu/Orign-copy'  # 로컬 Git 리포지토리 경로
 PR_HISTORY_FILE = '/home/ubuntu/pull_request_history.json'  # PR 내역 저장 파일 경로
+DENY_COMMENTS_FILE = '/home/ubuntu/deny_comments.json'  # 원하는 파일 경로로 변경
 
 # 깃허브에 인증
 g = Github(GITHUB_TOKEN)
 repo_user = g.get_repo(SOURCE_REPO)
-
-# 파일 읽기
-with open(FILE_PATH, 'r', encoding='utf-8') as file:
-    content = file.read()
-
-# 파일 업로드
-try:
-    existing_file = repo_user.get_contents(FILE_NAME_IN_REPO, ref=BRANCH_NAME)
-    repo_user.update_file(existing_file.path, COMMIT_MESSAGE, content, existing_file.sha, branch=BRANCH_NAME)
-    print("파일을 성공적으로 업로드했습니다.")
-except:
-    repo_user.create_file(FILE_NAME_IN_REPO, COMMIT_MESSAGE, content, branch=BRANCH_NAME)
-    print("File uploaded successfully to forked repository")
-
-# 포크된 리포지토리의 소유자 확인
-fork_owner = repo_user.owner.login
-print(f"포크된 리포지토리 사용자: {fork_owner}")
-
-# 원본 리포지토리의 기본 브랜치
-base_branch = 'main'
-
-# PR 생성 함수
-def create_pull_request(fork_owner, base_repo, title, body, head_branch, base_branch):
-    url = f'https://api.github.com/repos/{base_repo}/pulls'
-    headers = {
-        'Authorization': f'token {GITHUB_TOKEN}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    data = {
-        'title': title,
-        'body': body,
-        'head': f'{fork_owner}:{head_branch}',  # 사용자명:브랜치명 형식
-        'base': base_branch  # 원본 리포지토리의 기본 브랜치
-    }
-    print(f"생성하는데 사용된 PR 데이터: {data}")  # 로깅 추가
-    response = requests.post(url, json=data, headers=headers)
-    response.raise_for_status()
-    return response.json()
+fork_owner = repo_user.owner.login  # 포크된 리포지토리의 소유자 확인
 
 # 원본 리포지토리와 포크된 리포지토리 동기화 함수
 def sync_fork_with_upstream():
@@ -90,7 +55,7 @@ def sync_fork_with_upstream():
     run_command(f"git remote set-url origin {origin_url_with_token}", cwd=git_dir)
     
     print("원본 리포지토리를 upstream으로 등록")
-    run_command(f"git remote set-url upstream {upstream_url}", cwd=git_dir)
+    run_command(f"git remote add upstream {upstream_url}", cwd=git_dir)
     
     print("upstream 패치")
     run_command("git fetch upstream", cwd=git_dir)
@@ -98,11 +63,53 @@ def sync_fork_with_upstream():
     print("메인 브랜치 체크아웃")
     run_command("git checkout main", cwd=git_dir)
     
-    print("origin을 upstream으로 리베이스")
-    run_command("git reset --hard upstream/main", cwd=git_dir)
+    print("포크된 리포지토리를 원본 리포지토리와 동기화")
+    run_command("git rebase upstream/main", cwd=git_dir)
 
     print("변경 사항 푸시")
     run_command("git push origin main --force", cwd=git_dir)
+
+# 파일 업로드 함수
+def upload_file_to_github():
+    with open(FILE_PATH, 'r', encoding='utf-8') as file:
+        content = file.read()
+    
+    try:
+        existing_file = repo_user.get_contents(FILE_NAME_IN_REPO, ref=BRANCH_NAME)
+        repo_user.update_file(existing_file.path, COMMIT_MESSAGE, content, existing_file.sha, branch=BRANCH_NAME)
+        print("파일을 성공적으로 업로드했습니다.")
+    except:
+        repo_user.create_file(FILE_NAME_IN_REPO, COMMIT_MESSAGE, content, branch=BRANCH_NAME)
+        print("File uploaded successfully to forked repository")
+
+# PR 생성 함수
+def create_pull_request(fork_owner, base_repo, title, body, head_branch, base_branch):
+    url = f'https://api.github.com/repos/{base_repo}/pulls'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    data = {
+        'title': title,
+        'body': body,
+        'head': f'{fork_owner}:{head_branch}',  # 사용자명:브랜치명 형식
+        'base': base_branch  # 원본 리포지토리의 기본 브랜치
+    }
+    print(f"생성하는데 사용된 PR 데이터: {data}")  # 로깅 추가
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+# PR 정보 가져오기
+def get_pr_info(pr_number):
+    url = f'https://api.github.com/repos/{DEST_REPO}/pulls/{pr_number}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
 
 # PR 코멘트 가져오기
 def get_pr_comments(pr_number):
@@ -115,8 +122,20 @@ def get_pr_comments(pr_number):
     response.raise_for_status()
     return response.json()
 
+# /deny 명령의 코멘트 저장 함수
+def save_deny_comment(pr_number, comment):
+    deny_comment = {
+        'pr_number': pr_number,
+        'user': comment['user']['login'],
+        'comment': comment['body'],
+        'timestamp': datetime.now().isoformat(),
+    }
+    with open(DENY_COMMENTS_FILE, 'w', encoding='utf-8') as file:
+        json.dump([deny_comment], file, ensure_ascii=False, indent=4)  # 덮어쓰기 방식으로 저장
+    print("Deny 코멘트가 저장되었습니다.")
+    
 # GitHub Actions 워크플로우 트리거 함수
-def trigger_github_actions_workflow(pr_number):
+def trigger_github_actions_workflow(pr_number, action='approve'):
     url = f'https://api.github.com/repos/{DEST_REPO}/actions/workflows/approve-and-merge-pr.yml/dispatches'
     headers = {
         'Authorization': f'token {GITHUB_TOKEN}',
@@ -125,12 +144,13 @@ def trigger_github_actions_workflow(pr_number):
     data = {
         'ref': 'main',
         'inputs': {
-            'pr_number': str(pr_number)
+            'pr_number': str(pr_number),
+            'action': action
         }
     }
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 204:
-        print(f"PR #{pr_number}가 성공적으로 GitHub Actions 작업이 성공적으로 시작되었습니다.")
+        print(f"PR #{pr_number}에 대해 '{action}' GitHub Actions이 성공적으로 시작되었습니다.")
         return True
     else:
         print(f"Failed to trigger GitHub Actions workflow: {response.text}")
@@ -208,7 +228,7 @@ def webhook():
             print("PR이 거절되었습니다. 포크된 리포지토리를 원본 리포지토리와 동기화합니다.")
             comments = get_pr_comments(pr_number)
             for comment in comments:
-                print(f"코멘트 남긴 유저 {comment['user']['login']}: {comment['body']}")
+                print(f"코멘트 내역 {comment['user']['login']}: {comment['body']}")
             save_pr_history(pr_data['pull_request'], comments)
             sync_fork_with_upstream()
         
@@ -231,7 +251,7 @@ def webhook():
             if run_create_vm_code():
                 print("VM이 성공적으로 생성되었습니다")
                 if trigger_github_actions_workflow(pr_number):
-                    print(f"PR #{pr_number}의 Github Action을 시작합니다.")
+                    print(f"PR #{pr_number}의 'approve' 작업 진행중입니다.")
                 else:
                     print(f"Failed to approve and/or merge PR #{pr_number}.")
             else:
@@ -239,11 +259,22 @@ def webhook():
         if '/deny' in comment_body:  # /deny 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /deny가 감지되었습니다")
+            comments = get_pr_comments(pr_number)
+            for comment in comments:
+                 if '/deny' in comment['body']:
+                    save_deny_comment(pr_number, comment)
+                    break
+            if trigger_github_actions_workflow(pr_number, 'deny'):
+                print(f"PR #{pr_number}의 'deny' 작업 진행중입니다.")
+            else:
+                print(f"Failed to deny PR #{pr_number}.")
 
     return jsonify({'message': 'Success'}), 200
 
 # PR 생성 및 모니터링
 try:
+    sync_fork_with_upstream()  # 동기화 먼저 수행
+    upload_file_to_github()  # 파일 업로드 수행
     pr = create_pull_request(fork_owner, DEST_REPO, PR_TITLE, PR_BODY, BRANCH_NAME, base_branch)
     pr_number = pr['number']
     print(f"PR 생성 완료: {pr['html_url']}")
