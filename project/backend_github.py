@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 app = FastAPI()
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'gefM'  # 실제 토큰 값
+GITHUB_TOKEN = 'gh5wWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -224,27 +224,41 @@ def verify_signature(payload, signature):
     return hmac.compare_digest(generated_signature, signature)
 
 # vm 생성 코드 부분
-def run_create_vm_code(pr_number):
+def run_create_vm_code():
     try:
-        result = subprocess.run(["python3", "/home/ubuntu/push_to_github/create_vm.py"], capture_output=True, text=True)
-        if result.returncode != 0:
-            error_message = f"Error running create_vm.py: {result.stderr}"
-            print(error_message)
-            add_comment_to_pr(pr_number, error_message)  # PR에 실패 원인 코멘트 추가
-            return False
+        response = requests.get(
+            "http://localhost:8000/create_vm_with_keypair", # 현재 임의 값으로 다 채워둔 상태
+            params={
+                "access_key_id": "005bb667e6574c61a5d4577262b61d89",
+                "access_key_secret": "652351ba4ebc7feec7e2e07582926c4ba7a06b09f2a1dbf4c223d15e15769a30761e63",
+                "keypair_name": "test-lsh-vm",
+                "vm_name": "my-lsh-test",
+                "image_ref": "920ac13e-04f0-4a4a-81c1-3c36fec7a3a6",
+                "flavor_ref": "ff64c2aa-2e80-4cfd-a646-2b475270d31e",
+                "network_id": "9efb1795-5ca2-4c70-8e23-eef9c52793e0",
+                "availability_zone": "kr-central-2-a",
+                "description": "vm test with PR",
+                "security_group_name": "default",
+                "volume_size": 30,
+                "email_to": "jjinjukks1227@gmail.com",
+            },
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            print(f"VM 생성 및 이메일 전송 성공: {result}")
+            floating_ip_address = result.get("floating_ip_address")
+            keypair_name = result.get("keypair_name")
+            return True, floating_ip_address, keypair_name
         else:
-            print(f"create_vm.py output: {result.stdout}")
-            if "success" in result.stdout:
-                return True
-            else:
-                error_message = f"VM 생성 스크립트가 실패되었습니다\n실패 사유: {result.stdout}"
-                print(error_message)
-                add_comment_to_pr(pr_number, error_message)  # PR에 실패 원인 코멘트 추가
-                return False
+            error_message = f"VM 생성 실패: {response.text}"
+            print(error_message)
+            return False, None, None
+        
     except Exception as e:
         error_message = f"Exception running create_vm.py: {e}"
         print(error_message)
-        add_comment_to_pr(pr_number, error_message)  # PR에 실패 원인 코멘트 추가
+        add_comment_to_pr(pr_number, error_message)
         return False
 
 @app.post("/webhook")
@@ -288,16 +302,19 @@ async def webhook(request: Request):
         if '/approve' in comment_body:  # /approve 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /approve가 감지되었습니다")
-            if run_create_vm_code(pr_number):
+            success, floating_ip_address, keypair_name = run_create_vm_code()
+            if success:
                 print("VM이 성공적으로 생성되었습니다")
-                ssh_command = "여기에 ssh 명령어 입력"
+                ssh_command = f"ssh 접속 명령어: ssh -i ~/Downloads/{keypair_name}.pem ubuntu@{floating_ip_address}"
                 add_comment_to_pr(pr_number, ssh_command)
                 if trigger_github_actions_workflow(pr_number):
                     print(f"PR #{pr_number}의 'approve' 작업 진행중입니다.")
                 else:
                     print(f"Failed to approve and/or merge PR #{pr_number}.")
             else:
-                print("VM 생성 실패, PR을 다시 확인해주세요.\n")
+                error_message = "VM 생성 실패, PR을 다시 확인해주세요.\n"
+                print(error_message)
+                add_comment_to_pr(pr_number, error_message)
         if '/deny' in comment_body:  # /deny 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /deny가 감지되었습니다")

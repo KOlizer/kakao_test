@@ -282,5 +282,9 @@ async def create_vm_with_keypair( # 비동기 함수 정의
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
     return {
-        "message": f"VM created and assigned floating IP: {floating_ip_address}, email sent to {receiver_email}"
+        "message": f"VM created and assigned floating IP: {floating_ip_address}, email sent to {receiver_email}",
+        "floating_ip_address": floating_ip_address,
+        "keypair_name": keypair_name,
+        "ssh_command": f"ssh -i ~/Downloads/{keypair_name}.pem ubuntu@{floating_ip_address}"
     }  # VM 생성 및 이메일 전송 결과 반환
+    
