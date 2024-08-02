@@ -1,3 +1,4 @@
+// InputBox.js
 import React from 'react';
 import styled from 'styled-components';
 import ApiButton from './ApiButton';
@@ -12,6 +13,7 @@ interface InputBoxProps {
     showApiButton?: boolean;
     onApiClick?: (() => void);
     onConsoleClick?: (() => void);
+    onButtonClick?: (() => void); // 추가된 핸들러
     isLoading?: boolean;
     readOnly?: boolean;
     disableAll?: boolean;
@@ -59,7 +61,6 @@ const Input = styled.input<{ height?: string; hasError?: boolean }>`
     }
 `;
 
-
 const ErrorMessage = styled.div`
     color: red;
     margin-top: 0.5em;
@@ -68,22 +69,24 @@ const ErrorMessage = styled.div`
 const ButtonContainer = styled.div`
     display: flex;
     gap: 0.5em;
+    margin-top: 0.5em; /* 버튼과 입력 필드 사이의 간격 추가 */
 `;
 
 const InputBox: React.FC<InputBoxProps> = ({
-                                                label,
-                                                placeholder,
-                                                value,
-                                                onChange,
-                                                height,
-                                                showApiButton,
-                                                onApiClick,
-                                                onConsoleClick,
-                                                isLoading,
-                                                readOnly,
-                                                disableAll,
-                                                error
-                                            }) => {
+    label,
+    placeholder,
+    value,
+    onChange,
+    height,
+    showApiButton,
+    onApiClick,
+    onConsoleClick,
+    onButtonClick, // 추가된 핸들러
+    isLoading,
+    readOnly,
+    disableAll,
+    error
+}) => {
     return (
         <Container>
             <LabelContainer>
@@ -105,6 +108,11 @@ const InputBox: React.FC<InputBoxProps> = ({
                 hasError={!!error}
             />
             {error && <ErrorMessage>{error}</ErrorMessage>}
+            {onButtonClick && (
+                <ButtonContainer>
+                    <SharedButton onClick={onButtonClick} disabled={disableAll}>전송</SharedButton>
+                </ButtonContainer>
+            )}
         </Container>
     );
 };

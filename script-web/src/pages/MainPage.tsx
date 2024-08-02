@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import InputBox from '../components/InputBox';
+
 import ScriptDisplay from '../components/ScriptDisplay';
 import SelectBox from '../components/SelectBox';
 import styled from 'styled-components';
@@ -441,6 +442,25 @@ sudo -E ./script.sh`;
         dockerJavaVersion,
     };
     */
+
+
+    const handleSendKeys = async () => { // 값 보내기 함수
+        try {
+            const response = await axios.post('http://your-fastapi-server-ip:your-port/your-endpoint', {
+                accessKey,
+                secretKey,
+            });
+            console.log(response.data);
+        } catch (error) {
+            console.error('API 호출 오류:', error);
+        }
+    };
+
+
+
+
+
+
     return (
         <Container>
             <Title>Bastion VM 스크립트 생성</Title>
@@ -459,6 +479,8 @@ sudo -E ./script.sh`;
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
                     error={errors.secretKey}
+                    onButtonClick={handleSendKeys} // 추가된 핸들러
+
                 />
             </GroupContainer>
             <GroupContainer>
