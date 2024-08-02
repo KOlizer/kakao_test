@@ -445,8 +445,9 @@ sudo -E ./script.sh`;
 
 
     const handleSendKeys = async () => { // 값 보내기 함수
+        console.log('Button clicked');
         try {
-            const response = await axios.post('http://your-fastapi-server-ip:your-port/your-endpoint', {
+            const response = await axios.post('http://210.109.52.162:5000/make_pr', {
                 accessKey,
                 secretKey,
             });

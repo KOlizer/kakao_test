@@ -8,17 +8,33 @@ import requests
 from github import Github
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel  # 프론트 내용
+from fastapi.middleware.cors import CORSMiddleware # 프론트 연결 허용
+
+
+
+
+
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 모든 도메인에서의 요청을 허용
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'gh5wWM'  # 실제 토큰 값
+GITHUB_TOKEN = 'ghp_rJpcL325wWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
 SOURCE_REPO = 'KOlizer/Orign-copy'  # 포크된 리포지토리 이름
 DEST_REPO = 'syu-admin/Orign'  # 원본 리포지토리 이름
-FILE_PATH = '/home/ubuntu/push_to_github/test_rejection'  # 업로드할 파일 경로 (vm에 맞게 변경)
+FILE_PATH = '/home/ubuntu/push_to_github/make_from_front'  # 업로드할 파일 경로 (vm에 맞게 변경)
 FILE_NAME_IN_REPO = os.path.basename(FILE_PATH)  # 리포지토리에 저장될 파일 이름 (로컬 파일 경로에서 추출)
 COMMIT_MESSAGE = f'Add {FILE_NAME_IN_REPO} using PyGithub'  # 커밋 메시지
 PR_TITLE = f'{FILE_NAME_IN_REPO} 추가'  # PR 제목
@@ -277,8 +293,8 @@ async def webhook(request: Request):
     if event == 'pull_request': 
         pr_data = body
         action = pr_data['action']
-        merged = pr_data['pull_request']['merged']
         pr_number = pr_data['number']
+        merged = pr_data['pull_request'].get('merged', False)
 
         # PR이 거절되었고 병합되지 않았을 때 동기화
         if action == 'closed' and not merged:
@@ -330,17 +346,58 @@ async def webhook(request: Request):
 
     return JSONResponse(content={"message": "Success"})
 
-# PR 생성 및 모니터링
-try:
-    sync_fork_with_upstream()  # 동기화 먼저 수행
-    upload_file_to_github()  # 파일 업로드 수행
-    pr = create_pull_request(fork_owner, DEST_REPO, PR_TITLE, PR_BODY, BRANCH_NAME, base_branch) # PR 생성
-    pr_number = pr['number'] # PR 번호 지정
-    print(f"PR 생성 완료: {pr['html_url']} \n")
-except requests.exceptions.HTTPError as err:
-    print(f"HTTP 오류 발생: {err}")
-    print(f"응답 내용: {err.response.json()}")
+
+# PR 생성 및 모니터링 함수
+def process_pr():
+    try:
+        sync_fork_with_upstream()  # 동기화 먼저 수행
+        upload_file_to_github()  # 파일 업로드 수행
+        pr = create_pull_request(fork_owner, DEST_REPO, PR_TITLE, PR_BODY, BRANCH_NAME, base_branch) # PR 생성
+        pr_number = pr['number'] # PR 번호 지정
+        print(f"PR 생성 완료: {pr['html_url']} \n")
+    except requests.exceptions.HTTPError as err:
+        print(f"HTTP 오류 발생: {err}")
+        print(f"응답 내용: {err.response.json()}")
+        
+class PRRequest(BaseModel):
+    accessKey: str
+    secretKey: str
+        
+        
+@app.post("/make_pr")
+async def make_pr(request: PRRequest):
+    access_key = request.accessKey
+    secret_key = request.secretKey
+    
+    # access_key와 secret_key 확인 (로그 출력 또는 다른 처리)
+    print(f"Received accessKey: {access_key}")
+    print(f"Received secretKey: {secret_key}")
+        
+    # 파일 수정
+    if not os.path.exists(FILE_PATH):
+        return JSONResponse(content={"message": "File not found"}, status_code=404)
+    
+    with open(FILE_PATH, 'r', encoding='utf-8') as file:
+        content = file.read()
+    
+    # 이름과 연락처 값을 파일에 넣기
+    content = content.replace("이름:", f"이름: {access_key}")
+    content = content.replace("연락처:", f"연락처: {secret_key}")
+    
+    with open(FILE_PATH, 'w', encoding='utf-8') as file:
+        file.write(content)
+    
+    process_pr()
+    return JSONResponse(content={"message": "Pull request processing initiated."})
+
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5000)
+
+
+# uvicorn backend_github:app --host 0.0.0.0 --port 5000
+
+
+
+
