@@ -28,7 +28,7 @@ app.add_middleware(
 
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'ghp_rJpcL325wWM'  # 실제 토큰 값
+GITHUB_TOKEN = 'ghpWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -240,7 +240,7 @@ def verify_signature(payload, signature):
     return hmac.compare_digest(generated_signature, signature)
 
 # vm 생성 코드 부분
-def run_create_vm_code():
+def run_create_vm_code(pr_number):
     try:
         response = requests.get(
             "http://localhost:8000/create_vm_with_keypair", # 현재 임의 값으로 다 채워둔 상태
@@ -269,14 +269,15 @@ def run_create_vm_code():
         else:
             error_message = f"VM 생성 실패: {response.text}"
             print(error_message)
+            add_comment_to_pr(pr_number, error_message)
             return False, None, None
         
     except Exception as e:
         error_message = f"Exception running create_vm.py: {e}"
         print(error_message)
         add_comment_to_pr(pr_number, error_message)
-        return False
-
+        return False, None, None
+    
 @app.post("/webhook")
 async def webhook(request: Request):
     payload = await request.body()
@@ -318,7 +319,7 @@ async def webhook(request: Request):
         if '/approve' in comment_body:  # /approve 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /approve가 감지되었습니다")
-            success, floating_ip_address, keypair_name = run_create_vm_code()
+            success, floating_ip_address, keypair_name = run_create_vm_code(pr_number)
             if success:
                 print("VM이 성공적으로 생성되었습니다")
                 ssh_command = f"ssh 접속 명령어: ssh -i ~/Downloads/{keypair_name}.pem ubuntu@{floating_ip_address}"
@@ -328,9 +329,9 @@ async def webhook(request: Request):
                 else:
                     print(f"Failed to approve and/or merge PR #{pr_number}.")
             else:
-                error_message = "VM 생성 실패, PR을 다시 확인해주세요.\n"
-                print(error_message)
-                add_comment_to_pr(pr_number, error_message)
+                print("VM 생성 실패")
+                # run_create_vm_code에서 에러 메시지 코멘트 추가
+                pass
         if '/deny' in comment_body:  # /deny 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /deny가 감지되었습니다")
@@ -370,26 +371,41 @@ async def make_pr(request: PRRequest):
     secret_key = request.secretKey
     
     # access_key와 secret_key 확인 (로그 출력 또는 다른 처리)
-    print(f"Received accessKey: {access_key}")
-    print(f"Received secretKey: {secret_key}")
+    print(f"Received 이름: {access_key}")
+    print(f"Received 연락처: {secret_key}")
         
     # 파일 수정
     if not os.path.exists(FILE_PATH):
         return JSONResponse(content={"message": "File not found"}, status_code=404)
     
-    with open(FILE_PATH, 'r', encoding='utf-8') as file:
-        content = file.read()
+    # 새로운 내용 작성
+    new_content = f"""
+    -------------------------
+
+    사용자 정보:
+    이름: {access_key}
+    학번: [여기에 학번 입력]
+    비밀번호: [여기에 비밀번호 입력]
+    이메일: [여기에 이메일 입력]
+    연락처: {secret_key}
+    사용 용도: [여기에 사용 용도 입력]
+
+    VM 정보:
+    VM 이름: [여기에 VM 이름 입력]
+    사용 기간: [여기에 사용 기간 입력]
+    스펙: [여기에 스펙 입력]
+    개수: [여기에 VM 개수 입력]
+    운영체제 (OS): [여기에 운영체제 입력]
+    보안 그룹 (SG): [여기에 보안 그룹 입력]
+    볼륨: 30GB
     
-    # 이름과 연락처 값을 파일에 넣기
-    content = content.replace("이름:", f"이름: {access_key}")
-    content = content.replace("연락처:", f"연락처: {secret_key}")
+    """
     
-    with open(FILE_PATH, 'w', encoding='utf-8') as file:
-        file.write(content)
+    with open(FILE_PATH, 'a', encoding='utf-8') as file:
+        file.write(new_content)
     
     process_pr()
     return JSONResponse(content={"message": "Pull request processing initiated."})
-
 
 if __name__ == "__main__":
     import uvicorn
