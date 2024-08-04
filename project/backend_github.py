@@ -9,12 +9,7 @@ from github import Github
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel  # 프론트 내용
-from fastapi.middleware.cors import CORSMiddleware # 프론트 연결 허용
-
-
-
-
-
+from fastapi.middleware.cors import CORSMiddleware  # 프론트 연결 허용
 
 app = FastAPI()
 
@@ -26,9 +21,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'ghpWM'  # 실제 토큰 값
+GITHUB_TOKEN = 'ghp_cJ1u325wWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -36,14 +30,11 @@ SOURCE_REPO = 'KOlizer/Orign-copy'  # 포크된 리포지토리 이름
 DEST_REPO = 'syu-admin/Orign'  # 원본 리포지토리 이름
 FILE_PATH = '/home/ubuntu/push_to_github/make_from_front'  # 업로드할 파일 경로 (vm에 맞게 변경)
 FILE_NAME_IN_REPO = os.path.basename(FILE_PATH)  # 리포지토리에 저장될 파일 이름 (로컬 파일 경로에서 추출)
-COMMIT_MESSAGE = f'Add {FILE_NAME_IN_REPO} using PyGithub'  # 커밋 메시지
-PR_TITLE = f'{FILE_NAME_IN_REPO} 추가'  # PR 제목
-PR_BODY = f'{FILE_NAME_IN_REPO}을 추가했을 때 자원 상황 \n 퍼블릭 아이피 개수: 50/100개 \n 저장공간: 500/1000GB'
-BRANCH_NAME = 'main'  # 포크된 저장소의 브랜치 이름
-base_branch = 'main'  # 원본 리포지토리의 기본 브랜치
 REPO_DIR = '/home/ubuntu/Orign-copy'  # 로컬 Git 리포지토리 경로
 PR_HISTORY_FILE = '/home/ubuntu/pull_request_history.json'  # PR 내역 저장 파일 경로
 DENY_COMMENTS_FILE = '/home/ubuntu/deny_comments.json'  # 원하는 파일 경로로 변경
+base_branch = 'main'  # 원본 리포지토리의 기본 브랜치
+
 
 # 깃허브에 인증
 g = Github(GITHUB_TOKEN)
@@ -88,18 +79,29 @@ def sync_fork_with_upstream():
     print("변경 사항 푸시")
     run_command("git push origin main --force", cwd=git_dir)
 
+def create_branch(branch_name):
+    try:
+        repo_user.create_git_ref(ref=f"refs/heads/{branch_name}", sha=repo_user.get_branch("main").commit.sha)
+        print(f"브랜치 {branch_name} 생성 완료")
+    except Exception as e:
+        print(f"브랜치 생성 실패: {e}")
+
 # 파일 업로드 함수 (프론트에서 파일 받아오는 걸로 추가해야됨)
-def upload_file_to_github(): 
-    with open(FILE_PATH, 'r', encoding='utf-8') as file: #FILE_PATH 파일 content에 저장
+def upload_file_to_github(branch_name): 
+    commit_message = f'{branch_name} 추가'
+    with open(FILE_PATH, 'r', encoding='utf-8') as file: # FILE_PATH 파일 content에 저장
         content = file.read()
 
     try:
-        existing_file = repo_user.get_contents(FILE_NAME_IN_REPO, ref=BRANCH_NAME)
-        repo_user.update_file(existing_file.path, COMMIT_MESSAGE, content, existing_file.sha, branch=BRANCH_NAME)
-        print("파일을 성공적으로 업로드했습니다.")
-    except:
-        repo_user.create_file(FILE_NAME_IN_REPO, COMMIT_MESSAGE, content, branch=BRANCH_NAME)
-        print("File uploaded successfully to forked repository \n")
+        existing_file = repo_user.get_contents(FILE_NAME_IN_REPO, ref=branch_name)
+        repo_user.update_file(existing_file.path, commit_message, content, existing_file.sha, branch=branch_name)
+        print("파일을 성공적으로 업데이트했습니다.")
+    except github.GithubException as e:
+        if e.status == 404:
+            repo_user.create_file(FILE_NAME_IN_REPO, commit_message, content, branch=branch_name)
+            print("파일을 성공적으로 업로드했습니다.")
+        else:
+            raise
 
 # PR 생성 함수
 def create_pull_request(fork_owner, base_repo, title, body, head_branch, base_branch):
@@ -349,11 +351,13 @@ async def webhook(request: Request):
 
 
 # PR 생성 및 모니터링 함수
-def process_pr():
+def process_pr(branch_name, pr_title):
     try:
         sync_fork_with_upstream()  # 동기화 먼저 수행
-        upload_file_to_github()  # 파일 업로드 수행
-        pr = create_pull_request(fork_owner, DEST_REPO, PR_TITLE, PR_BODY, BRANCH_NAME, base_branch) # PR 생성
+        create_branch(branch_name)  # 브랜치 생성
+        upload_file_to_github(branch_name)  # 파일 업로드 수행
+        pr_body = f"{branch_name} 브랜치에 새로운 변경 사항이 있습니다."
+        pr = create_pull_request(fork_owner, DEST_REPO, pr_title, pr_body, branch_name, base_branch) # PR 생성
         pr_number = pr['number'] # PR 번호 지정
         print(f"PR 생성 완료: {pr['html_url']} \n")
     except requests.exceptions.HTTPError as err:
@@ -404,16 +408,13 @@ async def make_pr(request: PRRequest):
     with open(FILE_PATH, 'a', encoding='utf-8') as file:
         file.write(new_content)
     
-    process_pr()
+    # 고유한 브랜치 이름과 PR 제목 및 커밋 메시지 설정
+    branch_name = f'update-{access_key}'
+    pr_title = f'{access_key} 추가'
+    
+    process_pr(branch_name, pr_title)
     return JSONResponse(content={"message": "Pull request processing initiated."})
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5000)
-
-
-# uvicorn backend_github:app --host 0.0.0.0 --port 5000
-
-
-
-
