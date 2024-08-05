@@ -13,7 +13,9 @@ interface InputBoxProps {
     showApiButton?: boolean;
     onApiClick?: (() => void);
     onConsoleClick?: (() => void);
-    onButtonClick?: (() => void); // 추가된 핸들러
+    onButtonClick?: (() => void); // 추가된 생성 핸들러
+    onDeleteClick?: (() => void); // 추가된 삭제 핸들러
+
     isLoading?: boolean;
     readOnly?: boolean;
     disableAll?: boolean;
@@ -82,6 +84,7 @@ const InputBox: React.FC<InputBoxProps> = ({
     onApiClick,
     onConsoleClick,
     onButtonClick, // 추가된 핸들러
+    onDeleteClick, // 새로 추가된 핸들러
     isLoading,
     readOnly,
     disableAll,
@@ -108,11 +111,14 @@ const InputBox: React.FC<InputBoxProps> = ({
                 hasError={!!error}
             />
             {error && <ErrorMessage>{error}</ErrorMessage>}
-            {onButtonClick && (
-                <ButtonContainer>
+            <ButtonContainer>
+                {onButtonClick && (
                     <SharedButton onClick={onButtonClick} disabled={disableAll}>전송</SharedButton>
-                </ButtonContainer>
-            )}
+                )}
+                {onDeleteClick && (
+                    <SharedButton onClick={onDeleteClick} disabled={disableAll}>삭제</SharedButton>
+                )}
+            </ButtonContainer>
         </Container>
     );
 };

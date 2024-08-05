@@ -444,7 +444,7 @@ sudo -E ./script.sh`;
     */
 
 
-    const handleSendKeys = async () => { // 값 보내기 함수
+    const handleSendKeys = async () => { // 생성 값 보내기 함수
         console.log('Button clicked');
         try {
             const response = await axios.post('http://210.109.52.162:5000/make_pr', {
@@ -457,7 +457,18 @@ sudo -E ./script.sh`;
         }
     };
 
-
+    const handleDeleteKeys = async () => { // 새로 추가된 값 보내기 함수
+        console.log('Delete button clicked');
+        try {
+            const response = await axios.post('http://210.109.52.162:5000/delete_pr', {
+                accessKey,
+                secretKey,
+            });
+            console.log(response.data);
+        } catch (error) {
+            console.error('API 호출 오류:', error);
+        }
+    };
 
 
 
@@ -481,6 +492,8 @@ sudo -E ./script.sh`;
                     onChange={(e) => setSecretKey(e.target.value)}
                     error={errors.secretKey}
                     onButtonClick={handleSendKeys} // 추가된 핸들러
+                    onDeleteClick={handleDeleteKeys} // 새로운 삭제 핸들러 추가
+
 
                 />
             </GroupContainer>

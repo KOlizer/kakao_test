@@ -5,7 +5,7 @@ import hashlib
 from datetime import datetime
 import json
 import requests
-from github import Github
+from github import Github, GithubException  # GithubException 추가
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel  # 프론트 내용
@@ -22,7 +22,7 @@ app.add_middleware(
 )
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'ghp_cJ1u325wWM'  # 실제 토큰 값
+GITHUB_TOKEN = 'ghp_cJㄴㄹㄴㄹpcL325wWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -79,6 +79,7 @@ def sync_fork_with_upstream():
     print("변경 사항 푸시")
     run_command("git push origin main --force", cwd=git_dir)
 
+# 브랜치 생성
 def create_branch(branch_name):
     try:
         repo_user.create_git_ref(ref=f"refs/heads/{branch_name}", sha=repo_user.get_branch("main").commit.sha)
@@ -86,7 +87,7 @@ def create_branch(branch_name):
     except Exception as e:
         print(f"브랜치 생성 실패: {e}")
 
-# 파일 업로드 함수 (프론트에서 파일 받아오는 걸로 추가해야됨)
+# 파일 업로드(PUSH) 함수 
 def upload_file_to_github(branch_name): 
     commit_message = f'{branch_name} 추가'
     with open(FILE_PATH, 'r', encoding='utf-8') as file: # FILE_PATH 파일 content에 저장
@@ -96,12 +97,52 @@ def upload_file_to_github(branch_name):
         existing_file = repo_user.get_contents(FILE_NAME_IN_REPO, ref=branch_name)
         repo_user.update_file(existing_file.path, commit_message, content, existing_file.sha, branch=branch_name)
         print("파일을 성공적으로 업데이트했습니다.")
-    except github.GithubException as e:
+    except GithubException as e:  # GithubException 사용
         if e.status == 404:
             repo_user.create_file(FILE_NAME_IN_REPO, commit_message, content, branch=branch_name)
             print("파일을 성공적으로 업로드했습니다.")
         else:
             raise
+
+# 파일 내용 삭제 함수
+def delete_entry_from_file(access_key, secret_key):
+    try:
+        with open(FILE_PATH, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+
+        target_index = None
+
+        # 항목 시작을 찾기
+        for i, line in enumerate(lines):
+            if line.strip() == f"이름: {access_key}" and lines[i + 1].strip() == f"연락처: {secret_key}":
+                target_index = i
+                break
+
+        if target_index is None:
+            raise HTTPException(status_code=404, detail="Entry not found in file")
+
+        # 항목 삭제 (위아래 1줄씩 포함)
+        start_index = max(target_index - 1, 0)
+        end_index = min(target_index + 4, len(lines))  # 이름, 연락처, 사용 용도, 빈 줄 포함
+
+        del lines[start_index:end_index]
+
+        # 파일 덮어쓰기
+        with open(FILE_PATH, 'w', encoding='utf-8') as file:
+            file.writelines(lines)
+
+        # PR 생성
+        branch_name = f'delete-{access_key}'
+        pr_title = f'{access_key} 삭제'
+        pr_body = f'{access_key} 항목이 삭제되었습니다.'
+        create_branch(branch_name)
+        upload_file_to_github(branch_name)
+        create_pull_request(fork_owner, DEST_REPO, pr_title, pr_body, branch_name, base_branch)
+    except Exception as e:
+        print(f"Error in delete_entry_from_file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # PR 생성 함수
 def create_pull_request(fork_owner, base_repo, title, body, head_branch, base_branch):
@@ -364,11 +405,13 @@ def process_pr(branch_name, pr_title):
         print(f"HTTP 오류 발생: {err}")
         print(f"응답 내용: {err.response.json()}")
         
+# PR 생성시 필요 값들
 class PRRequest(BaseModel):
     accessKey: str
     secretKey: str
         
-        
+
+# PR 생성 요청 받는 API
 @app.post("/make_pr")
 async def make_pr(request: PRRequest):
     access_key = request.accessKey
@@ -388,21 +431,8 @@ async def make_pr(request: PRRequest):
 
     사용자 정보:
     이름: {access_key}
-    학번: [여기에 학번 입력]
-    비밀번호: [여기에 비밀번호 입력]
-    이메일: [여기에 이메일 입력]
-    연락처: {secret_key}
-    사용 용도: [여기에 사용 용도 입력]
-
-    VM 정보:
-    VM 이름: [여기에 VM 이름 입력]
-    사용 기간: [여기에 사용 기간 입력]
-    스펙: [여기에 스펙 입력]
-    개수: [여기에 VM 개수 입력]
-    운영체제 (OS): [여기에 운영체제 입력]
-    보안 그룹 (SG): [여기에 보안 그룹 입력]
-    볼륨: 30GB
-    
+    연락처: {secret_key}\
+        
     """
     
     with open(FILE_PATH, 'a', encoding='utf-8') as file:
@@ -414,6 +444,30 @@ async def make_pr(request: PRRequest):
     
     process_pr(branch_name, pr_title)
     return JSONResponse(content={"message": "Pull request processing initiated."})
+
+
+
+# PR 삭제 요청 시 필요한 값들
+
+class DeletePRRequest(BaseModel):
+    accessKey: str
+    secretKey: str
+
+
+# PR 삭제 요청 받는 API
+
+@app.post("/delete_pr")
+async def delete_pr(request: DeletePRRequest):
+    access_key = request.accessKey
+    secret_key = request.secretKey
+    
+    # access_key와 secret_key 확인 (로그 출력 또는 다른 처리)
+    print(f"Received 삭제 요청 - 이름: {access_key}, 연락처: {secret_key}")
+
+    delete_entry_from_file(access_key, secret_key)
+    return JSONResponse(content={"message": "Deletion PR processing initiated."})
+
+
 
 if __name__ == "__main__":
     import uvicorn
