@@ -15,14 +15,14 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 도메인에서의 요청을 허용
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # GitHub Personal Access Token
-GITHUB_TOKEN = 'ghp_cJㄴㄹㄴㄹpcL325wWM'  # 실제 토큰 값
+GITHUB_TOKEN = 'ssvmZFUqssss5wWM'  # 실제 토큰 값
 WEBHOOK_SECRET = 'syu_1234'
 
 # 저장소 정보
@@ -34,7 +34,6 @@ REPO_DIR = '/home/ubuntu/Orign-copy'  # 로컬 Git 리포지토리 경로
 PR_HISTORY_FILE = '/home/ubuntu/pull_request_history.json'  # PR 내역 저장 파일 경로
 DENY_COMMENTS_FILE = '/home/ubuntu/deny_comments.json'  # 원하는 파일 경로로 변경
 base_branch = 'main'  # 원본 리포지토리의 기본 브랜치
-
 
 # 깃허브에 인증
 g = Github(GITHUB_TOKEN)
@@ -141,8 +140,6 @@ def delete_entry_from_file(access_key, secret_key):
     except Exception as e:
         print(f"Error in delete_entry_from_file: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 # PR 생성 함수
 def create_pull_request(fork_owner, base_repo, title, body, head_branch, base_branch):
@@ -362,19 +359,19 @@ async def webhook(request: Request):
         if '/approve' in comment_body:  # /approve 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /approve가 감지되었습니다")
-            success, floating_ip_address, keypair_name = run_create_vm_code(pr_number)
-            if success:
-                print("VM이 성공적으로 생성되었습니다")
-                ssh_command = f"ssh 접속 명령어: ssh -i ~/Downloads/{keypair_name}.pem ubuntu@{floating_ip_address}"
-                add_comment_to_pr(pr_number, ssh_command)
-                if trigger_github_actions_workflow(pr_number):
-                    print(f"PR #{pr_number}의 'approve' 작업 진행중입니다.")
-                else:
-                    print(f"Failed to approve and/or merge PR #{pr_number}.")
+            
+            # 임시 테스트 성공 가정
+            floating_ip_address = "192.168.0.1"  # 예시 IP 주소
+            keypair_name = "example-keypair"  # 예시 키페어 이름
+            
+            print("VM이 성공적으로 생성되었습니다")
+            ssh_command = f"ssh 접속 명령어: ssh -i ~/Downloads/{keypair_name}.pem ubuntu@{floating_ip_address}"
+            add_comment_to_pr(pr_number, ssh_command)
+            if trigger_github_actions_workflow(pr_number):
+                print(f"PR #{pr_number}의 'approve' 작업 진행중입니다.")
             else:
-                print("VM 생성 실패")
-                # run_create_vm_code에서 에러 메시지 코멘트 추가
-                pass
+                print(f"Failed to approve and/or merge PR #{pr_number}.")
+            
         if '/deny' in comment_body:  # /deny 감지시
             pr_number = comment_data['issue']['number']
             print(f"#{pr_number}에서 /deny가 감지되었습니다")
@@ -390,7 +387,6 @@ async def webhook(request: Request):
 
     return JSONResponse(content={"message": "Success"})
 
-
 # PR 생성 및 모니터링 함수
 def process_pr(branch_name, pr_title):
     try:
@@ -404,69 +400,92 @@ def process_pr(branch_name, pr_title):
     except requests.exceptions.HTTPError as err:
         print(f"HTTP 오류 발생: {err}")
         print(f"응답 내용: {err.response.json()}")
-        
+
 # PR 생성시 필요 값들
 class PRRequest(BaseModel):
     accessKey: str
     secretKey: str
-        
+    # 추후 다른 값을 받을 예정
 
-# PR 생성 요청 받는 API
-@app.post("/make_pr")
-async def make_pr(request: PRRequest):
-    access_key = request.accessKey
-    secret_key = request.secretKey
-    
-    # access_key와 secret_key 확인 (로그 출력 또는 다른 처리)
-    print(f"Received 이름: {access_key}")
-    print(f"Received 연락처: {secret_key}")
-        
-    # 파일 수정
-    if not os.path.exists(FILE_PATH):
-        return JSONResponse(content={"message": "File not found"}, status_code=404)
-    
-    # 새로운 내용 작성
-    new_content = f"""
-    -------------------------
-
-    사용자 정보:
-    이름: {access_key}
-    연락처: {secret_key}\
-        
-    """
-    
-    with open(FILE_PATH, 'a', encoding='utf-8') as file:
-        file.write(new_content)
-    
-    # 고유한 브랜치 이름과 PR 제목 및 커밋 메시지 설정
-    branch_name = f'update-{access_key}'
-    pr_title = f'{access_key} 추가'
-    
-    process_pr(branch_name, pr_title)
-    return JSONResponse(content={"message": "Pull request processing initiated."})
-
-
-
-# PR 삭제 요청 시 필요한 값들
+class ExtendPRRequest(BaseModel):
+    accessKey: str
+    secretKey: str
+    # 추후 다른 값을 받을 예정
 
 class DeletePRRequest(BaseModel):
     accessKey: str
     secretKey: str
+    # 추후 다른 값을 받을 예정
 
+@app.post("/make_pr")
+async def make_vm(request: PRRequest):
+    vm_name = request.accessKey
+    password = request.secretKey
+    print(f"생성시작, 받은 값: {vm_name} 와 {password}")
 
-# PR 삭제 요청 받는 API
+    new_content = f"""
+    ---------------------------------
+    구분: 생성
+    Vm이름: {vm_name}
+    비밀번호: {password}
+    ---------------------------------
+    """
+    
+    with open(FILE_PATH, 'a', encoding='utf-8') as file:
+        file.write(new_content)
+
+    branch_name = f'create-{vm_name}'
+    pr_title = f'{vm_name} VM 생성'
+    
+    process_pr(branch_name, pr_title)
+    return JSONResponse(content={"message": "Pull request processing initiated."})
 
 @app.post("/delete_pr")
-async def delete_pr(request: DeletePRRequest):
-    access_key = request.accessKey
-    secret_key = request.secretKey
+async def delete_vm(request: DeletePRRequest):
+    vm_name = request.accessKey
+    password = request.secretKey
+    print(f"삭제시작, 받은 값: {vm_name} 와 {password}")
+
+
+    new_content = f"""
+    ---------------------------------
+    구분: 삭제
+    Vm이름: {vm_name}
+    비밀번호: {password}
+    ---------------------------------
+    """
     
-    # access_key와 secret_key 확인 (로그 출력 또는 다른 처리)
-    print(f"Received 삭제 요청 - 이름: {access_key}, 연락처: {secret_key}")
+    with open(FILE_PATH, 'a', encoding='utf-8') as file:
+        file.write(new_content)
 
-    delete_entry_from_file(access_key, secret_key)
-    return JSONResponse(content={"message": "Deletion PR processing initiated."})
+    branch_name = f'delete-{vm_name}'
+    pr_title = f'{vm_name} VM 삭제'
+    
+    process_pr(branch_name, pr_title)
+    return JSONResponse(content={"message": "Pull request processing initiated."})
 
+@app.post("/extend_pr")
+async def extend_vm(request: ExtendPRRequest):
+    vm_name = request.accessKey
+    password = request.secretKey
+    print(f"연장시작, 받은 값: {vm_name} 와 {password}")
+
+    new_content = f"""
+    ---------------------------------
+    구분: 수정
+    Vm이름: {vm_name}
+    비밀번호: {password}
+    ---------------------------------
+    """
+    
+    with open(FILE_PATH, 'a', encoding='utf-8') as file:
+        file.write(new_content)
+
+    branch_name = f'extend-{vm_name}'
+    pr_title = f'{vm_name} VM 수정'
+    
+    process_pr(branch_name, pr_title)
+    return JSONResponse(content={"message": "Pull request processing initiated."})
 
 
 if __name__ == "__main__":
