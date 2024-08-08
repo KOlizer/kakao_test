@@ -212,7 +212,6 @@ def add_comment_to_pr(pr_number, comment_body):
 def save_deny_comment(pr_number, comment):
     deny_comment = {
         'pr_number': pr_number,
-        'user': comment['user']['login'],
         'comment': comment['body'],
         'timestamp': datetime.now().isoformat(),
     }
@@ -367,7 +366,7 @@ async def webhook(request: Request):
             print("VM이 성공적으로 생성되었습니다")
             ssh_command = f"ssh 접속 명령어: ssh -i ~/Downloads/{keypair_name}.pem ubuntu@{floating_ip_address}"
             add_comment_to_pr(pr_number, ssh_command)
-            if trigger_github_actions_workflow(pr_number):
+            if trigger_github_actions_workflow(pr_number, 'approve'):
                 print(f"PR #{pr_number}의 'approve' 작업 진행중입니다.")
             else:
                 print(f"Failed to approve and/or merge PR #{pr_number}.")
